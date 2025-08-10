@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:layout="@layout/activity_settings">
+
+    <PreferenceCategory app:title="常规设置">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="notifications_enabled"
+            app:summary="允许应用发送通知"
+            app:title="开启通知" />
+
+        <ListPreference
+            app:defaultValue="@array/sound_choice_values"
+            app:entries="@array/sound_choice_entries"
+            app:entryValues="@array/sound_choice_values"
+            app:key="sound_preference"
+            app:title="音量控制"
+            app:summary="%s"
+            app:useSimpleSummaryProvider="true"  />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="高级设置">
+
+        <ListPreference
+            app:defaultValue="@array/theme_values"
+            app:entries="@array/theme_entries"
+            app:entryValues="@array/theme_values"
+            app:key="theme_preference"
+            app:summary="%s"
+            app:title="应用主题"
+            app:useSimpleSummaryProvider="true" />
+
+        <CheckBoxPreference
+            app:defaultValue="false"
+            app:key="advanced_logging"
+            app:summaryOff="记录基本信息"
+            app:summaryOn="记录详细调试信息"
+            app:title="启用高级日志" />
+
+    </PreferenceCategory>
+
+    <Preference
+        app:key="about_app"
+        app:summary="查看应用版本和开发者信息"
+        app:title="关于应用">
+        <!-- 你可以为这个 Preference 添加一个 Intent 来打开一个新的 Activity -->
+        <!-- <intent
+            android:action="com.example.yourapp.ABOUT_ACTION" /> -->
+    </Preference>
+
+</PreferenceScreen>

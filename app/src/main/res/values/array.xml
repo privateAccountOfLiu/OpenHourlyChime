@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="sound_choice_values">
+        <item>media_sound_control</item>
+        <item>notification_sound_control</item>
+        <item>alarm_sound_control</item>
+    </string-array>
+    <string-array name="sound_choice_entries">
+        <item>媒体音量控制</item>
+        <item>提示音量控制</item>
+        <item>闹钟音量控制</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>common_theme</item>
+        <item>night_theme</item>
+    </string-array>
+    <string-array name="theme_entries">
+        <item>常规主题</item>
+        <item>夜间主题</item>
+    </string-array>
+</resources>

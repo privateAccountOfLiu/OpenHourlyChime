@@ -29,6 +29,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/str9" />
+
         <!-- 前台服务 -->
         <service
             android:name=".TimeService"

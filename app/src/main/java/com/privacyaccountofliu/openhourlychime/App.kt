@@ -1,6 +1,5 @@
 package com.privacyaccountofliu.openhourlychime
 
-// App.kt
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager

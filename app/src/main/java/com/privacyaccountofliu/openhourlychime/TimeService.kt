@@ -8,16 +8,25 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.icu.util.Calendar
+import android.icu.util.TimeZone
+import android.media.AudioAttributes
 import android.os.IBinder
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.preference.PreferenceManager
+import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.Tools
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.util.Locale
 
 
-class TimeService : Service(), TextToSpeech.OnInitListener {
+class TimeService : Service(), TextToSpeech.OnInitListener{
     private val notificationId = 1001
     private lateinit var textToSpeech: TextToSpeech
+    private lateinit var defaultAudioAttributes: AudioAttributes
     private var isTtsReady = false
     private var pendingSpeakRequest: String? = null
 
@@ -27,30 +36,10 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         super.onCreate()
         initTTS()
         startForeground(notificationId, createNotification())
-    }
-
-    private fun createNotification(): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
-            .setContentTitle("整点报时服务运行中")
-            .setContentText("将在每小时整点语音播报时间")
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .build()
-    }
-
-    private fun initTTS() {
-        textToSpeech = TextToSpeech(this, this)
+        EventBus.getDefault().register(this)
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val soundPreferencesOpi = sharedPreferences.getString("sound_preference", "media_sound_control")
+        defaultAudioAttributes = Tools().yieldAudioAttr(soundPreferencesOpi)
     }
 
     override fun onInit(status: Int) {
@@ -59,6 +48,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             isTtsReady = if (result != TextToSpeech.LANG_MISSING_DATA &&
                 result != TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.d("TTS", "引擎初始化成功")
+                textToSpeech.setAudioAttributes(defaultAudioAttributes)
                 true
             } else {
                 Log.e("TTS", "不支持中文语音")
@@ -83,12 +73,53 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        EventBus.getDefault().unregister(this)
+        super.onDestroy()
+        textToSpeech.stop()
+        textToSpeech.shutdown()
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onAudioConfig(event: AudioConfigEvent) {
+        textToSpeech.setAudioAttributes(event.attributes)
+    }
+
+    private fun createNotification(): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
+            .setContentTitle("整点报时服务运行中")
+            .setContentText("将在每小时整点语音播报时间")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .build()
+    }
+
+    private fun initTTS() {
+        textToSpeech = TextToSpeech(this, this)
+        textToSpeech.apply {
+            setSpeechRate(0.5f)
+            setPitch(1.0f)
+        }
+    }
+
     private fun handleHourlyChime() {
         val now = Calendar.getInstance()
+        val defaultZoneId = TimeZone.getDefault().displayName
         val timeText = when (val hour = now.get(Calendar.HOUR_OF_DAY)) {
-            0 -> "现在是 午夜 12 点"
-            12 -> "现在是 中午 12 点"
-            else -> "现在是 $hour 点整"
+            0 -> "整点播报：现在是{$defaultZoneId} 午夜 12 点整"
+            12 -> "整点播报：现在是{$defaultZoneId} 中午 12 点整"
+            else -> "整点播报：现在是{$defaultZoneId} $hour 点整"
         }
         speak(timeText)
         sendChimeNotification(timeText)
@@ -98,7 +129,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val minute = now.get(Calendar.MINUTE)
-        val timeText = "测试报时：现在是 ${hour}点${minute}分"
+        val defaultZoneId = TimeZone.getDefault().displayName
+        val timeText = "测试报时：现在是$defaultZoneId ${hour}点${minute}分"
         speak(timeText)
     }
 
@@ -130,12 +162,6 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         } else {
             pendingSpeakRequest = text
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        textToSpeech.stop()
-        textToSpeech.shutdown()
     }
 
     companion object {

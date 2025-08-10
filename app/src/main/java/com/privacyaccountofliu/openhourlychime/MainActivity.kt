@@ -6,6 +6,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,14 +15,19 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
+import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.Tools
+import org.greenrobot.eventbus.EventBus
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
     private lateinit var binding: ActivityMainBinding
     private lateinit var alarmManager: AlarmManager
     private lateinit var pendingIntent: PendingIntent
+    private var soundPreferencesOpi: String = "media_sound_control"
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -54,6 +60,29 @@ class MainActivity : AppCompatActivity() {
         binding.btnDebug.setOnClickListener {
             triggerTestChime()
         }
+
+        binding.btnSettings.setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+        }
+
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .registerOnSharedPreferenceChangeListener(this)
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        when (key) {
+            "sound_preference" -> {
+                soundPreferencesOpi = sharedPreferences?.getString(key, "media_sound_control").toString()
+            }
+        }
+        updateTtsConfig(soundPreferencesOpi)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .unregisterOnSharedPreferenceChangeListener(this)
     }
 
     private fun createAlarmPendingIntent(): PendingIntent {
@@ -126,5 +155,10 @@ class MainActivity : AppCompatActivity() {
             action = "ACTION_TEST_CHIME"
         }
         startService(intent)
+    }
+
+    private fun updateTtsConfig(soundPreferencesOpi: String?) {
+        val attributes = Tools().yieldAudioAttr(soundPreferencesOpi)
+        EventBus.getDefault().post(AudioConfigEvent(attributes))
     }
 }
