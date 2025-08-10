@@ -1,0 +1,39 @@
+package com.privacyaccountofliu.openhourlychime
+
+// App.kt
+import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+
+class App : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannels()
+    }
+
+    private fun createNotificationChannels() {
+        // 创建通知渠道
+        val serviceChannel = NotificationChannel(
+            "time_service_channel",
+            "整点报时服务",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "后台服务运行状态通知"
+        }
+
+        val alarmChannel = NotificationChannel(
+            "alarm_channel",
+            "报时提醒",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "整点报时提醒"
+        }
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager?.apply {
+            createNotificationChannel(serviceChannel)
+            createNotificationChannel(alarmChannel)
+        }
+    }
+}

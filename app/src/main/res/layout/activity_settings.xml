@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/str4"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp"/>
+
+    <RadioGroup
+        android:id="@+id/frequencyGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/radioHourly"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/str5"
+            tools:ignore="TouchTargetSizeCheck" />
+
+        <RadioButton
+            android:id="@+id/radioHalfHour"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/str6"
+            tools:ignore="TouchTargetSizeCheck" />
+
+        <RadioButton
+            android:id="@+id/radioQuarter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/str7"
+            tools:ignore="TouchTargetSizeCheck" />
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/str8"
+        android:layout_marginTop="24dp"
+        tools:ignore="TouchTargetSizeCheck" />
+</LinearLayout>

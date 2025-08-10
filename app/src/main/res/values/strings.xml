@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">OpenHourlyChime</string>
+    <string name="str1">启动报时服务</string>
+    <string name="str2">停止报时服务</string>
+    <string name="str3">测试报时</string>
+    <string name="str4">播报频率</string>
+    <string name="str5">整点</string>
+    <string name="str6">半小时</string>
+    <string name="str7">15分钟</string>
+    <string name="str8">保存设置</string>
+    <string name="str9">设置</string>
+</resources>
