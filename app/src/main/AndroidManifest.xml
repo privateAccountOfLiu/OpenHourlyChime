@@ -34,7 +34,8 @@
             android:name=".TimeService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false"
-            tools:ignore="ForegroundServicePermission" />
+            tools:ignore="ForegroundServicePermission"
+            android:priority="1000"/>
 
         <!-- 闹钟广播接收器 -->
         <receiver android:name=".AlarmReceiver"

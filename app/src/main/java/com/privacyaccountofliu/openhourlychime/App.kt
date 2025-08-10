@@ -15,7 +15,7 @@ class App : Application() {
     private fun createNotificationChannels() {
         // 创建通知渠道
         val serviceChannel = NotificationChannel(
-            "time_service_channel",
+            "time_service_channel_open_hourly_chime",
             "整点报时服务",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
@@ -23,7 +23,7 @@ class App : Application() {
         }
 
         val alarmChannel = NotificationChannel(
-            "alarm_channel",
+            "alarm_channel_open_hourly_chime",
             "报时提醒",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {

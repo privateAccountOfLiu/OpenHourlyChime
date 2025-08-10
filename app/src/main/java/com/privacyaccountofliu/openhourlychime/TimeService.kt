@@ -37,7 +37,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, "time_service_channel")
+        return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
             .setContentTitle("整点报时服务运行中")
             .setContentText("将在每小时整点语音播报时间")
             .setSmallIcon(R.drawable.ic_notification)
@@ -112,7 +112,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(this, "alarm_channel")
+        val notification = NotificationCompat.Builder(this, "alarm_channel_open_hourly_chime")
             .setContentTitle("整点报时")
             .setContentText(timeText)
             .setSmallIcon(R.drawable.ic_notification)
