@@ -1,7 +1,8 @@
-package com.privacyaccountofliu.openhourlychime
+package com.privacyaccountofliu.openhourlychime.model
 
 import android.os.Bundle
 import androidx.preference.PreferenceFragmentCompat
+import com.privacyaccountofliu.openhourlychime.R
 
 class SettingsFragment : PreferenceFragmentCompat() {
 

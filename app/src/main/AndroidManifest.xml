@@ -35,14 +35,14 @@
 
         <!-- 前台服务 -->
         <service
-            android:name=".TimeService"
+            android:name=".model.TimeService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false"
             tools:ignore="ForegroundServicePermission"
             android:priority="1000"/>
 
         <!-- 闹钟广播接收器 -->
-        <receiver android:name=".AlarmReceiver"
+        <receiver android:name=".model.AlarmReceiver"
             android:exported="false"/>
     </application>
 

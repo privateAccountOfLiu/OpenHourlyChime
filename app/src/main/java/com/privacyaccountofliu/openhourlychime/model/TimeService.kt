@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime
+package com.privacyaccountofliu.openhourlychime.model
 
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -15,8 +15,8 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
-import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
-import com.privacyaccountofliu.openhourlychime.model.Tools
+import com.privacyaccountofliu.openhourlychime.MainActivity
+import com.privacyaccountofliu.openhourlychime.R
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode

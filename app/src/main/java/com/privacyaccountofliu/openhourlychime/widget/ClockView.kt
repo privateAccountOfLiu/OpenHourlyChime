@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime
+package com.privacyaccountofliu.openhourlychime.widget
 
 import android.content.Context
 import android.graphics.*
@@ -8,7 +8,6 @@ import android.util.AttributeSet
 import android.view.View
 import kotlin.math.cos
 import kotlin.math.sin
-import android.util.Log
 import java.time.LocalDateTime
 
 class ClockView @JvmOverloads constructor(

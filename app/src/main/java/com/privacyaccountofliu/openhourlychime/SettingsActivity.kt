@@ -2,6 +2,7 @@ package com.privacyaccountofliu.openhourlychime
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.privacyaccountofliu.openhourlychime.model.SettingsFragment
 
 class SettingsActivity : AppCompatActivity() {
 
