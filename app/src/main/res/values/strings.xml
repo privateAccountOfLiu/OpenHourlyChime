@@ -11,4 +11,6 @@
     <string name="str9">设置</string>
     <string name="str10">主页</string>
     <string name="str11">设置</string>
+    <string name="nav_head_icon">nav_head_icon</string>
+    <string name="welcome">Welcome to use OpenHourlyChime!</string>
 </resources>

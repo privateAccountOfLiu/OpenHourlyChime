@@ -13,12 +13,8 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
-import com.google.android.material.navigation.NavigationView
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
 import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
 import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
@@ -28,12 +24,10 @@ import org.greenrobot.eventbus.EventBus
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-@Suppress("DEPRECATION")
-class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
+class MainActivity : BaseActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
     private lateinit var binding: ActivityMainBinding
     private lateinit var alarmManager: AlarmManager
     private lateinit var pendingIntent: PendingIntent
-    private lateinit var drawerLayout: DrawerLayout
     private var soundPreferencesOpi: String = "media_sound_control"
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -46,6 +40,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    override fun getLayoutResId() = R.layout.activity_main
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -56,7 +52,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         pendingIntent = createAlarmPendingIntent()
         drawerLayout = findViewById(R.id.drawer_layout)
-        val navView: NavigationView = findViewById(R.id.nav_view)
+        navView = findViewById(R.id.nav_view)
+        navView.setCheckedItem(R.id.nav_home)
+        setupToolbar()
+        setupNavigation()
 
 
         supportActionBar?.apply {
@@ -77,27 +76,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             triggerTestChime()
         }
 
-        binding.btnSettings.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-
-        navView.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_home -> {
-                    // 切换到首页
-                }
-                R.id.nav_settings -> {
-                    // 切换到设置
-                }
-            }
-            drawerLayout.closeDrawer(GravityCompat.START) // 关闭抽屉
-            true
-        }
-
         PreferenceManager.getDefaultSharedPreferences(this)
             .registerOnSharedPreferenceChangeListener(this)
     }
+
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
@@ -114,18 +96,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             .unregisterOnSharedPreferenceChangeListener(this)
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        drawerLayout.openDrawer(GravityCompat.START) // 点击菜单图标打开抽屉
-        return true
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
-        }
+    override fun onResume() {
+        super.onResume()
+        // 每次返回时更新选中状态
+        navView.setCheckedItem(R.id.nav_home)
     }
 
     private fun createAlarmPendingIntent(): PendingIntent {

@@ -21,8 +21,13 @@
             android:name="android.app.alarm"
             android:value="true" />
 
+        <activity
+            android:name=".BaseActivity" />
+
         <activity android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:priority="10000">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -39,11 +44,12 @@
             android:foregroundServiceType="mediaPlayback"
             android:exported="false"
             tools:ignore="ForegroundServicePermission"
-            android:priority="1000"/>
+            android:priority="10000"/>
 
         <!-- 闹钟广播接收器 -->
         <receiver android:name=".model.AlarmReceiver"
-            android:exported="false"/>
+            android:exported="false"
+            android:priority="10000"/>
     </application>
 
     <queries>
