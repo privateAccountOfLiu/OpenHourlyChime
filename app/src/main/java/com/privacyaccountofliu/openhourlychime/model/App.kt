@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime
+package com.privacyaccountofliu.openhourlychime.model
 
 import android.app.Application
 import android.app.NotificationChannel

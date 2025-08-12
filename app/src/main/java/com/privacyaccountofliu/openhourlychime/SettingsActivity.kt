@@ -1,9 +1,20 @@
 package com.privacyaccountofliu.openhourlychime
 
+import android.content.Intent
 import android.os.Bundle
+import com.privacyaccountofliu.openhourlychime.databinding.ActivitySettingsBinding
+import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.PreferenceActionListener
 import com.privacyaccountofliu.openhourlychime.model.SettingsFragment
+import com.privacyaccountofliu.openhourlychime.model.TimeService
+import com.privacyaccountofliu.openhourlychime.model.Tools
+import org.greenrobot.eventbus.EventBus
 
-class SettingsActivity : BaseActivity() {
+class SettingsActivity : BaseActivity(), PreferenceActionListener {
+
+    private lateinit var binding: ActivitySettingsBinding
+    private var soundPreferencesOpi: String = "media_sound_control"
+
     override fun getLayoutResId() = R.layout.activity_settings
 
 
@@ -13,19 +24,25 @@ class SettingsActivity : BaseActivity() {
         drawerLayout = findViewById(R.id.drawer_layout)
         navView = findViewById(R.id.nav_view)
         navView.setCheckedItem(R.id.nav_home)
+        binding = ActivitySettingsBinding.inflate(layoutInflater)
+
         setupToolbar()
         setupNavigation()
 
 
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_menu) // 使用菜单图标
+            setHomeAsUpIndicator(R.drawable.ic_menu)
+        }
+
+        val fragment = SettingsFragment().apply {
+            setPreferenceActionListener(this@SettingsActivity)
         }
 
         if (savedInstanceState == null) {
             supportFragmentManager
                 .beginTransaction()
-                .replace(R.id.settings_container, SettingsFragment())
+                .replace(R.id.settings_container, fragment)
                 .commit()
         }
     }
@@ -39,7 +56,35 @@ class SettingsActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 每次返回时更新选中状态
         navView.setCheckedItem(R.id.nav_settings)
+    }
+
+    override fun onPreferenceClicked(key: String) {
+        when (key) {
+            "test_broad_cast_preference" -> triggerTestChime()
+            "about_preference" -> startActivity(Intent(this, AboutActivity::class.java))
+        }
+    }
+
+    override fun onPreferenceChanged(key: String, newValue: Any) {
+        when (key) {
+            "sound_preference" -> {
+                soundPreferencesOpi = newValue.toString()
+                updateTtsConfig(soundPreferencesOpi)
+            }
+        }
+    }
+
+    private fun triggerTestChime() {
+        TimeService.startService(this)
+        val intent = Intent(this, TimeService::class.java).apply {
+            action = "ACTION_TEST_CHIME"
+        }
+        startService(intent)
+    }
+
+    private fun updateTtsConfig(soundPreferencesOpi: String?) {
+        val attributes = Tools().yieldAudioAttr(soundPreferencesOpi)
+        EventBus.getDefault().post(AudioConfigEvent(attributes))
     }
 }

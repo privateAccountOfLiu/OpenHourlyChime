@@ -13,4 +13,14 @@
     <string name="str11">设置</string>
     <string name="nav_head_icon">nav_head_icon</string>
     <string name="welcome">Welcome to use OpenHourlyChime!</string>
+    <string name="msg2">Author: privateAccountOfLiu</string>
+    <string name="msg3">Version: 1.1\n</string>
+    <string name="msg4">Github:</string>
+    <string name="msg5">https://github.com/privateAccountOfLiu</string>
+    <string name="msg6">/OpenHourlyChime\n</string>
+    <string name="msg7">Notice：</string>
+    <string name="msg8">制作不易，如果喜欢，点个star吧</string>
+    <string name="msg9">本软件为开源项目，请勿用于商业用途</string>
+    <string name="msg10">最终解释权归作者所有</string>
+    <string name="str12">关于</string>
 </resources>

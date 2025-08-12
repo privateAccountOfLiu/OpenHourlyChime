@@ -6,7 +6,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,21 +13,16 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
 import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
-import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
 import com.privacyaccountofliu.openhourlychime.model.TimeService
-import com.privacyaccountofliu.openhourlychime.model.Tools
-import org.greenrobot.eventbus.EventBus
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-class MainActivity : BaseActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
+class MainActivity : BaseActivity(){
     private lateinit var binding: ActivityMainBinding
     private lateinit var alarmManager: AlarmManager
     private lateinit var pendingIntent: PendingIntent
-    private var soundPreferencesOpi: String = "media_sound_control"
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -60,40 +54,16 @@ class MainActivity : BaseActivity(), SharedPreferences.OnSharedPreferenceChangeL
 
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_menu) // 使用菜单图标
+            setHomeAsUpIndicator(R.drawable.ic_menu)
         }
 
-        // 设置按钮监听器
-        binding.btnStart.setOnClickListener {
-            startAlarmService()
-        }
-
-        binding.btnStop.setOnClickListener {
-            stopAlarmService()
-        }
-
-        binding.btnDebug.setOnClickListener {
-            triggerTestChime()
-        }
-
-        PreferenceManager.getDefaultSharedPreferences(this)
-            .registerOnSharedPreferenceChangeListener(this)
-    }
-
-
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        when (key) {
-            "sound_preference" -> {
-                soundPreferencesOpi = sharedPreferences?.getString(key, "media_sound_control").toString()
+        binding.switchOpenService.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                startAlarmService()
+            } else {
+                stopAlarmService()
             }
         }
-        updateTtsConfig(soundPreferencesOpi)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        PreferenceManager.getDefaultSharedPreferences(this)
-            .unregisterOnSharedPreferenceChangeListener(this)
     }
 
     override fun onResume() {
@@ -172,10 +142,5 @@ class MainActivity : BaseActivity(), SharedPreferences.OnSharedPreferenceChangeL
             action = "ACTION_TEST_CHIME"
         }
         startService(intent)
-    }
-
-    private fun updateTtsConfig(soundPreferencesOpi: String?) {
-        val attributes = Tools().yieldAudioAttr(soundPreferencesOpi)
-        EventBus.getDefault().post(AudioConfigEvent(attributes))
     }
 }

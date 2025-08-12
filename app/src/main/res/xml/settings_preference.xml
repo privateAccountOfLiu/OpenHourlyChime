@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     app:layout="@layout/activity_settings">
 
     <PreferenceCategory app:title="常规设置">
@@ -18,6 +19,13 @@
             app:title="音量控制"
             app:summary="%s"
             app:useSimpleSummaryProvider="true"  />
+
+        <Preference
+            android:id="@+id/test_broad_cast_preference"
+            app:key="test_broad_cast_preference"
+            app:summary="进行测试播报"
+            app:title="@string/str3">
+        </Preference>
 
     </PreferenceCategory>
 
@@ -42,7 +50,7 @@
     </PreferenceCategory>
 
     <Preference
-        app:key="about_app"
+        app:key="about_preference"
         app:summary="查看应用版本和开发者信息"
         app:title="关于应用">
         <!-- 你可以为这个 Preference 添加一个 Intent 来打开一个新的 Activity -->
