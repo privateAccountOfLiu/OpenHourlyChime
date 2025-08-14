@@ -15,7 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
 import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
-import com.privacyaccountofliu.openhourlychime.model.TimeService
+import com.privacyaccountofliu.openhourlychime.model.services.TimeService
+import com.privacyaccountofliu.openhourlychime.model.ToastUtil
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
@@ -26,11 +27,8 @@ class MainActivity : BaseActivity(){
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            // 权限已授予，启动服务
-            TimeService.startService(this)
-        } else {
-            Toast.makeText(this, "需要通知权限才能显示后台运行状态", Toast.LENGTH_LONG).show()
+        if (!isGranted) {
+            ToastUtil.showToast(this, "需要正常权限才能完整运行")
         }
     }
 
@@ -90,18 +88,26 @@ class MainActivity : BaseActivity(){
 
     private fun startServiceWithPermissionCheck() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                TimeService.startService(this)
+            val permissionList = listOf(Manifest.permission.POST_NOTIFICATIONS)
+            for (permission in permissionList) {
+                if (ContextCompat.checkSelfPermission(
+                        this,
+                        permission
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissionLauncher.launch(permission)
+                } else { if (ContextCompat.checkSelfPermission(
+                        this,
+                        permission )
+                    == PackageManager.PERMISSION_DENIED) {
+                    ToastUtil.showToast(this, "需要正常权限才能完整运行")
+                }
+                }
             }
         } else {
-            TimeService.startService(this)
+            Toast.makeText(this, "获取权限失败请手动设置！", Toast.LENGTH_SHORT).show()
         }
+        TimeService.startService(this)
     }
 
     private fun stopAlarmService() {
@@ -134,13 +140,5 @@ class MainActivity : BaseActivity(){
             set(Calendar.MILLISECOND, 0)
             add(Calendar.HOUR_OF_DAY, 1) // 下一个整点
         }
-    }
-
-    private fun triggerTestChime() {
-        TimeService.startService(this)
-        val intent = Intent(this, TimeService::class.java).apply {
-            action = "ACTION_TEST_CHIME"
-        }
-        startService(intent)
     }
 }

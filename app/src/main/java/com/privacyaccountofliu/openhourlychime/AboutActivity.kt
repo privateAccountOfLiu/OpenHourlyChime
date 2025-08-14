@@ -2,14 +2,15 @@ package com.privacyaccountofliu.openhourlychime
 
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 
-class AboutActivity: AppCompatActivity() {
+@Suppress("DEPRECATION")
+class AboutActivity: BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_about)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
+
+    override fun getLayoutResId() = R.layout.activity_about
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
@@ -19,5 +20,17 @@ class AboutActivity: AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        super.onBackPressed()
+        finish()
+    }
+
+    override fun setupToolbar() {
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true) // 汉堡菜单图标
+        }
     }
 }

@@ -3,12 +3,14 @@ package com.privacyaccountofliu.openhourlychime.model
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import com.privacyaccountofliu.openhourlychime.model.services.KeepAliveJobService
 
 class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        KeepAliveJobService.scheduleJob(this)
     }
 
     private fun createNotificationChannels() {

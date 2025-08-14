@@ -3,59 +3,61 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     app:layout="@layout/activity_settings">
 
-    <PreferenceCategory app:title="常规设置">
+    <PreferenceCategory app:title="@string/set1">
 
         <SwitchPreferenceCompat
             app:defaultValue="true"
             app:key="notifications_enabled"
-            app:summary="允许应用发送通知"
-            app:title="开启通知" />
+            app:summary="@string/set2"
+            app:title="@string/set3" />
 
         <ListPreference
-            app:defaultValue="@array/sound_choice_values"
             app:entries="@array/sound_choice_entries"
             app:entryValues="@array/sound_choice_values"
+            app:defaultValue="media_sound_control"
             app:key="sound_preference"
-            app:title="音量控制"
+            app:title="@string/set4"
             app:summary="%s"
             app:useSimpleSummaryProvider="true"  />
 
+        <com.privacyaccountofliu.openhourlychime.widget.TimeRangePreference
+            app:key="time_range_preference"
+            app:title="@string/set15"
+            app:summary="%s"
+            app:useSimpleSummaryProvider="true"/>
+
         <Preference
-            android:id="@+id/test_broad_cast_preference"
             app:key="test_broad_cast_preference"
-            app:summary="进行测试播报"
+            app:summary="@string/set5"
             app:title="@string/str3">
         </Preference>
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="高级设置">
+    <PreferenceCategory app:title="@string/set6">
 
         <ListPreference
-            app:defaultValue="@array/theme_values"
             app:entries="@array/theme_entries"
             app:entryValues="@array/theme_values"
+            app:defaultValue="common_theme"
             app:key="theme_preference"
             app:summary="%s"
-            app:title="应用主题"
+            app:title="@string/set7"
             app:useSimpleSummaryProvider="true" />
 
         <CheckBoxPreference
             app:defaultValue="false"
             app:key="advanced_logging"
-            app:summaryOff="记录基本信息"
-            app:summaryOn="记录详细调试信息"
-            app:title="启用高级日志" />
+            app:summaryOff="@string/set8"
+            app:summaryOn="@string/set9"
+            app:title="@string/set10" />
 
     </PreferenceCategory>
 
     <Preference
         app:key="about_preference"
-        app:summary="查看应用版本和开发者信息"
-        app:title="关于应用">
-        <!-- 你可以为这个 Preference 添加一个 Intent 来打开一个新的 Activity -->
-        <!-- <intent
-            android:action="com.example.yourapp.ABOUT_ACTION" /> -->
+        app:summary="@string/set11"
+        app:title="@string/set12">
     </Preference>
 
 </PreferenceScreen>

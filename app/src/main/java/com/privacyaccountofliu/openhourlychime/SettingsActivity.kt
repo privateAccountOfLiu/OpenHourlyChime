@@ -5,9 +5,9 @@ import android.os.Bundle
 import com.privacyaccountofliu.openhourlychime.databinding.ActivitySettingsBinding
 import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
 import com.privacyaccountofliu.openhourlychime.model.PreferenceActionListener
-import com.privacyaccountofliu.openhourlychime.model.SettingsFragment
-import com.privacyaccountofliu.openhourlychime.model.TimeService
+import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.Tools
+import com.privacyaccountofliu.openhourlychime.model.fragments.SettingsFragment
 import org.greenrobot.eventbus.EventBus
 
 class SettingsActivity : BaseActivity(), PreferenceActionListener {
@@ -70,7 +70,11 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
         when (key) {
             "sound_preference" -> {
                 soundPreferencesOpi = newValue.toString()
-                updateTtsConfig(soundPreferencesOpi)
+                updateTtsSoundConfig(soundPreferencesOpi)
+            }
+            "time_range_preference" -> {
+                val timeRange = newValue as List<Int>
+                updateTimeRangeConfig(timeRange)
             }
         }
     }
@@ -83,8 +87,12 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
         startService(intent)
     }
 
-    private fun updateTtsConfig(soundPreferencesOpi: String?) {
+    private fun updateTtsSoundConfig(soundPreferencesOpi: String?) {
         val attributes = Tools().yieldAudioAttr(soundPreferencesOpi)
         EventBus.getDefault().post(AudioConfigEvent(attributes))
+    }
+
+    private fun updateTimeRangeConfig(timeRange: List<Int>) {
+        EventBus.getDefault().post(timeRange)
     }
 }

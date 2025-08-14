@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime.model
+package com.privacyaccountofliu.openhourlychime.model.services
 
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -17,18 +17,21 @@ import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.MainActivity
 import com.privacyaccountofliu.openhourlychime.R
+import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.Tools
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.util.Locale
 
 
-class TimeService : Service(), TextToSpeech.OnInitListener{
+class TimeService : Service(), TextToSpeech.OnInitListener {
     private val notificationId = 1001
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var defaultAudioAttributes: AudioAttributes
     private var isTtsReady = false
     private var pendingSpeakRequest: String? = null
+    private var timeRange: List<Int> = listOf(DEFAULT_START, DEFAULT_END)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -38,7 +41,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
         startForeground(notificationId, createNotification())
         EventBus.getDefault().register(this)
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        val soundPreferencesOpi = sharedPreferences.getString("sound_preference", "media_sound_control")
+        val soundPreferencesOpi =
+            sharedPreferences.getString("sound_preference", "media_sound_control")
         defaultAudioAttributes = Tools().yieldAudioAttr(soundPreferencesOpi)
     }
 
@@ -46,7 +50,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
         if (status == TextToSpeech.SUCCESS) {
             val result = textToSpeech.setLanguage(Locale.CHINA)
             isTtsReady = if (result != TextToSpeech.LANG_MISSING_DATA &&
-                result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                result != TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
                 Log.d("TTS", "引擎初始化成功")
                 textToSpeech.setAudioAttributes(defaultAudioAttributes)
                 true
@@ -85,6 +90,11 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
         textToSpeech.setAudioAttributes(event.attributes)
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onTimeRangeConfig(event: List<Int>) {
+        timeRange = event
+    }
+
     private fun createNotification(): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -116,13 +126,17 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
     private fun handleHourlyChime() {
         val now = Calendar.getInstance()
         val defaultZoneId = TimeZone.getDefault().displayName
-        val timeText = when (val hour = now.get(Calendar.HOUR_OF_DAY)) {
-            0 -> "整点播报：现在是{$defaultZoneId} 午夜 12 点整"
-            12 -> "整点播报：现在是{$defaultZoneId} 中午 12 点整"
-            else -> "整点播报：现在是{$defaultZoneId} $hour 点整"
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        val minute = now.get(Calendar.MINUTE)
+        if (timeRange[0] <= hour * 60 + minute && hour * 60 + minute <= timeRange[1]) {
+            val timeText = when (hour) {
+                0 -> "整点播报：现在是{$defaultZoneId} 午夜 12 点整"
+                12 -> "整点播报：现在是{$defaultZoneId} 中午 12 点整"
+                else -> "整点播报：现在是{$defaultZoneId} $hour 点整"
+            }
+            speak(timeText)
+            sendChimeNotification(timeText)
         }
-        speak(timeText)
-        sendChimeNotification(timeText)
     }
 
     private fun handleTestChime() {
@@ -130,12 +144,14 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val minute = now.get(Calendar.MINUTE)
         val defaultZoneId = TimeZone.getDefault().displayName
+        Log.d("TimeService", "$timeRange")
         val timeText = "测试报时：现在是$defaultZoneId ${hour}点${minute}分"
         speak(timeText)
     }
 
     private fun sendChimeNotification(timeText: String) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -174,5 +190,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener{
         fun stopService(context: Context) {
             context.stopService(Intent(context, TimeService::class.java))
         }
+
+        private const val DEFAULT_START = 420
+        private const val DEFAULT_END = 1320
     }
 }

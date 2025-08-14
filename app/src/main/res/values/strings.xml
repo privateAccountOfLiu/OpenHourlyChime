@@ -23,4 +23,19 @@
     <string name="msg9">本软件为开源项目，请勿用于商业用途</string>
     <string name="msg10">最终解释权归作者所有</string>
     <string name="str12">关于</string>
+    <string name="set1">常规设置</string>
+    <string name="set2">允许应用发送通知</string>
+    <string name="set3">开启通知</string>
+    <string name="set4">音量控制</string>
+    <string name="set5">进行测试播报</string>
+    <string name="set6">高级设置</string>
+    <string name="set7">应用主题</string>
+    <string name="set8">记录基本信息</string>
+    <string name="set9">记录详细调试信息</string>
+    <string name="set10">启用高级日志</string>
+    <string name="set11">查看应用版本和开发者信息</string>
+    <string name="set12">关于应用</string>
+    <string name="set13">开始时间</string>
+    <string name="set14">结束时间</string>
+    <string name="set15">报时时间范围</string>
 </resources>

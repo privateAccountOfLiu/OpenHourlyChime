@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".model.App"
@@ -27,6 +31,10 @@
         <activity android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:alwaysRetainTaskState="true"
+            android:directBootAware="true"
+            android:lockTaskMode="always"
+            android:persistableMode="persistRootOnly"
             android:priority="10000">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -44,16 +52,24 @@
 
         <!-- 前台服务 -->
         <service
-            android:name=".model.TimeService"
+            android:name=".model.services.TimeService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false"
             tools:ignore="ForegroundServicePermission"
             android:priority="10000"/>
 
+        <service
+            android:name=".model.services.KeepAliveJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
+
         <!-- 闹钟广播接收器 -->
-        <receiver android:name=".model.AlarmReceiver"
+        <receiver
+            android:name=".model.AlarmReceiver"
+            android:enabled="true"
             android:exported="false"
-            android:priority="10000"/>
+            android:priority="10000">
+        </receiver>
     </application>
 
     <queries>
