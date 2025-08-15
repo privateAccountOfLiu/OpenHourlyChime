@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.privacyaccountofliu.openhourlychime.model.services.KeepAliveJobService
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -15,6 +16,12 @@ import java.util.Calendar
 class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
+        if (intent != null) {
+            if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+                Log.d("BootReceiver", "Device boot completed, rescheduling jobs")
+                KeepAliveJobService.scheduleJob(context)
+            }
+        }
         startTimeService(context)
         setNextAlarm(context)
     }

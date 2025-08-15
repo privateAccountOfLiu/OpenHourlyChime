@@ -93,6 +93,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onTimeRangeConfig(event: List<Int>) {
         timeRange = event
+        DEFAULT_START = event[0]
+        DEFAULT_START = event[1]
     }
 
     private fun createNotification(): Notification {
@@ -191,7 +193,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             context.stopService(Intent(context, TimeService::class.java))
         }
 
-        private const val DEFAULT_START = 420
+        private var DEFAULT_START = 420
         private const val DEFAULT_END = 1320
     }
 }

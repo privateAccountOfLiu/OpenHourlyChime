@@ -3,6 +3,7 @@ package com.privacyaccountofliu.openhourlychime
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlarmManager
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
 import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
+import com.privacyaccountofliu.openhourlychime.model.BatteryOptimizationHelper
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.ToastUtil
 import java.text.SimpleDateFormat
@@ -24,6 +26,7 @@ class MainActivity : BaseActivity(){
     private lateinit var binding: ActivityMainBinding
     private lateinit var alarmManager: AlarmManager
     private lateinit var pendingIntent: PendingIntent
+    private lateinit var batteryHelper: BatteryOptimizationHelper
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -54,6 +57,9 @@ class MainActivity : BaseActivity(){
             setDisplayHomeAsUpEnabled(true)
             setHomeAsUpIndicator(R.drawable.ic_menu)
         }
+
+        batteryHelper = BatteryOptimizationHelper(this)
+        checkBatteryOptimizationStatus()
 
         binding.switchOpenService.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -140,5 +146,22 @@ class MainActivity : BaseActivity(){
             set(Calendar.MILLISECOND, 0)
             add(Calendar.HOUR_OF_DAY, 1) // 下一个整点
         }
+    }
+
+    private fun checkBatteryOptimizationStatus() {
+        if (!batteryHelper.isIgnoringBatteryOptimizations()) {
+            showWhitelistRequestDialog()
+        }
+    }
+
+    private fun showWhitelistRequestDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("后台运行权限")
+            .setMessage("为保证应用后台正常运行，请开启省电白名单和自启动权限")
+            .setPositiveButton("去设置") { _, _ ->
+                batteryHelper.guideUserToBatteryWhitelist()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 }
