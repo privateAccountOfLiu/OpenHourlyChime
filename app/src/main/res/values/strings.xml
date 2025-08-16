@@ -67,7 +67,9 @@
     <string name="array_alarm_player">Alarm Volume Control</string>
     <string name="common_theme">Light Theme</string>
     <string name="night_theme">Dark Theme</string>
-    <string name="Chinese">Chinese</string>
+    <string name="Chinese">中文</string>
     <string name="English">English</string>
     <string name="set16">Language</string>
+    <string name="dialog_need_restart_title">Need To Restart</string>
+    <string name="dialog_need_restart_msg">This item needs to be restarted to take effect</string>
 </resources>

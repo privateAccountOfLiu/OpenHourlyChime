@@ -18,6 +18,7 @@ import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.MainActivity
 import com.privacyaccountofliu.openhourlychime.R
 import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 import com.privacyaccountofliu.openhourlychime.model.tools.Tools
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -27,6 +28,7 @@ import java.util.Locale
 
 class TimeService : Service(), TextToSpeech.OnInitListener {
     private val notificationId = 1001
+    private val appContext: Context by lazy { applicationContext }
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var defaultAudioAttributes: AudioAttributes
     private var isTtsReady = false
@@ -38,6 +40,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
 
     override fun onCreate() {
         super.onCreate()
+        LocaleHelper.applyServiceLanguage(appContext)
         initTTS()
         EventBus.getDefault().register(this)
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
@@ -53,7 +56,12 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = textToSpeech.setLanguage(Locale.CHINA)
+            Log.w("Language", LocaleHelper.getLanguage(this))
+            val result = when (LocaleHelper.getLanguage(this)) {
+                "Chinese" -> textToSpeech.setLanguage(Locale.CHINA)
+                "English" -> textToSpeech.setLanguage(Locale.ENGLISH)
+                else -> textToSpeech.setLanguage(Locale.CHINA)
+            }
             isTtsReady = if (result != TextToSpeech.LANG_MISSING_DATA &&
                 result != TextToSpeech.LANG_NOT_SUPPORTED
             ) {
@@ -76,6 +84,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        updateLanguage()
         when (intent?.action) {
             "ACTION_HOURLY_CHIME" -> handleHourlyChime()
             "ACTION_TEST_CHIME" -> handleTestChime()
@@ -107,6 +116,10 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         isNotice = tag
     }
 
+    private fun updateLanguage() {
+        LocaleHelper.applyServiceLanguage(appContext)
+    }
+
     private fun createNotification(): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -116,8 +129,8 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         )
 
         return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
-            .setContentTitle(getString(R.string.notice_1))
-            .setContentText(getString(R.string.notice_2))
+            .setContentTitle(appContext.getString(R.string.notice_1))
+            .setContentText(appContext.getString(R.string.notice_2))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -144,9 +157,9 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val minute = now.get(Calendar.MINUTE)
         if (timeRange[0] <= hour * 60 + minute && hour * 60 + minute <= timeRange[1]) {
             val timeText = when (hour) {
-                0 -> getString(R.string.TTS_1, defaultZoneId)
-                12 -> getString(R.string.TTS_2, defaultZoneId)
-                else -> getString(R.string.TTS_3, defaultZoneId, hour)
+                0 -> appContext.getString(R.string.TTS_1, defaultZoneId)
+                12 -> appContext.getString(R.string.TTS_2, defaultZoneId)
+                else -> appContext.getString(R.string.TTS_3, defaultZoneId, hour)
             }
             speak(timeText)
             sendChimeNotification(timeText)
@@ -160,7 +173,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val minute = now.get(Calendar.MINUTE)
         val defaultZoneId = TimeZone.getDefault().displayName
         Log.d("TimeService", "$timeRange")
-        val timeText = getString(R.string.TTS_4, defaultZoneId, hour, minute)
+        val timeText = appContext.getString(R.string.TTS_4, defaultZoneId, hour, minute)
         speak(timeText)
         Log.d("TimeRange", "时间范围: $timeRange")
     }

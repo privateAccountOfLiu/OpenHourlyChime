@@ -1,5 +1,6 @@
 package com.privacyaccountofliu.openhourlychime
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import com.privacyaccountofliu.openhourlychime.databinding.ActivitySettingsBinding
@@ -7,10 +8,12 @@ import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
 import com.privacyaccountofliu.openhourlychime.model.fragments.SettingsFragment
 import com.privacyaccountofliu.openhourlychime.model.interfaces.PreferenceActionListener
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
+import com.privacyaccountofliu.openhourlychime.model.tools.AppRestartManager.restartApp
 import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 import com.privacyaccountofliu.openhourlychime.model.tools.Tools
 import org.greenrobot.eventbus.EventBus
 
+@Suppress("DEPRECATION")
 class SettingsActivity : BaseActivity(), PreferenceActionListener {
 
     private lateinit var binding: ActivitySettingsBinding
@@ -82,9 +85,8 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
                 updateIsNoticeConfig(isNotice)
             }
             "language_preference" -> {
-                val language = newValue.toString()
-                LocaleHelper.setLocale(this, language)
-                recreate()
+                saveLanguageSetting(newValue.toString())
+                showRestartDialog()
             }
         }
     }
@@ -108,5 +110,24 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
 
     private fun updateTimeRangeConfig(timeRange: List<*>) {
         EventBus.getDefault().post(timeRange)
+    }
+
+    private fun saveLanguageSetting(language: String) {
+        LocaleHelper.setLocale(this, language)
+    }
+
+    private fun showRestartDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_need_restart_title))
+            .setMessage(getString(R.string.dialog_need_restart_msg))
+            .setPositiveButton(getString(R.string.Yes)) { _, _ ->
+                restartApp()
+            }
+            .show()
+    }
+
+    private fun restartApp() {
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        applicationContext.restartApp()
     }
 }

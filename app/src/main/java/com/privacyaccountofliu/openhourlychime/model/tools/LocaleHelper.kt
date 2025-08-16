@@ -4,7 +4,6 @@ package com.privacyaccountofliu.openhourlychime.model.tools
 
 import android.content.Context
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.preference.PreferenceManager
 import androidx.core.content.edit
 import java.util.Locale
@@ -24,14 +23,14 @@ object LocaleHelper {
 
     fun getLanguage(context: Context): String {
         val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-        return preferences.getString(SELECTED_LANGUAGE, "system") ?: "system"
+        return preferences.getString(SELECTED_LANGUAGE, "Chinese") ?: "Chinese"
     }
 
     private fun updateResources(context: Context, language: String): Context {
         val locale = when (language) {
-            "system" -> Resources.getSystem().configuration.locales[0]
-            "zh" -> Locale("zh", "CN")
-            else -> Locale.ENGLISH
+            "Chinese" -> Locale("zh", "CN")
+            "English" -> Locale.ENGLISH
+            else -> Locale("zh", "CN")
         }
 
         Locale.setDefault(locale)
@@ -41,5 +40,10 @@ object LocaleHelper {
 
         config.setLocale(locale)
         return context.createConfigurationContext(config)
+    }
+
+    fun applyServiceLanguage(context: Context) {
+        val language = getLanguage(context)
+        updateResources(context, language)
     }
 }

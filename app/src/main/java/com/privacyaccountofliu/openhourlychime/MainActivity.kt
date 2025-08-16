@@ -15,9 +15,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
+import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.tools.AlarmReceiver
 import com.privacyaccountofliu.openhourlychime.model.tools.BatteryOptimizationHelper
-import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.tools.ToastUtil
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -39,11 +39,8 @@ class MainActivity : BaseActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // 初始化组件
         alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         pendingIntent = createAlarmPendingIntent()
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -72,7 +69,6 @@ class MainActivity : BaseActivity(){
 
     override fun onResume() {
         super.onResume()
-        // 每次返回时更新选中状态
         navView.setCheckedItem(R.id.nav_home)
     }
 

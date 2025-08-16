@@ -26,7 +26,8 @@
             android:value="true" />
 
         <activity
-            android:name=".BaseActivity" />
+            android:name=".BaseActivity"
+            android:configChanges="locale|layoutDirection" />
 
         <activity android:name=".MainActivity"
             android:exported="true"
@@ -35,7 +36,8 @@
             android:directBootAware="true"
             android:lockTaskMode="always"
             android:persistableMode="persistRootOnly"
-            android:priority="10000">
+            android:priority="10000"
+            android:configChanges="locale|layoutDirection">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -44,11 +46,13 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/str9" />
+            android:label="@string/str9"
+            android:configChanges="locale|layoutDirection"/>
 
         <activity
             android:name=".AboutActivity"
-            android:label="@string/str12" />
+            android:label="@string/str12"
+            android:configChanges="locale|layoutDirection"/>
 
         <!-- 前台服务 -->
         <service

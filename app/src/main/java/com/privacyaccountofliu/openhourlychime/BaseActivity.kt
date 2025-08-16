@@ -1,5 +1,6 @@
 package com.privacyaccountofliu.openhourlychime
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -16,17 +17,15 @@ abstract class BaseActivity : AppCompatActivity() {
     protected lateinit var drawerLayout: DrawerLayout
     protected lateinit var navView: NavigationView
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(getLayoutResId())
-        updateLocale()
-
         drawerLayout = findViewById(R.id.drawer_layout)
         navView = findViewById(R.id.nav_view)
-
         setupNavigation()
         setupToolbar()
-
+        updateLocale()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -105,5 +104,4 @@ abstract class BaseActivity : AppCompatActivity() {
         val context = LocaleHelper.setLocale(this, language)
         resources.updateConfiguration(context.resources.configuration, resources.displayMetrics)
     }
-
 }
