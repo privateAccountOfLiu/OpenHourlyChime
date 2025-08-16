@@ -3,12 +3,16 @@ package com.privacyaccountofliu.openhourlychime.model
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
+import com.privacyaccountofliu.openhourlychime.R
 import com.privacyaccountofliu.openhourlychime.model.services.KeepAliveJobService
+import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 
 class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        setupLocale()
         createNotificationChannels()
         KeepAliveJobService.scheduleJob(this)
     }
@@ -17,18 +21,18 @@ class App : Application() {
         // 创建通知渠道
         val serviceChannel = NotificationChannel(
             "time_service_channel_open_hourly_chime",
-            "整点报时服务",
+            getString(R.string.channel_1),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "后台服务运行状态通知"
+            description = getString(R.string.channel_2)
         }
 
         val alarmChannel = NotificationChannel(
             "alarm_channel_open_hourly_chime",
-            "报时提醒",
+            getString(R.string.channel_3),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "整点报时提醒"
+            description = getString(R.string.channel_4)
         }
 
         val notificationManager = getSystemService(NotificationManager::class.java)
@@ -36,5 +40,14 @@ class App : Application() {
             createNotificationChannel(serviceChannel)
             createNotificationChannel(alarmChannel)
         }
+    }
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleHelper.setLocale(base, LocaleHelper.getLanguage(base)))
+    }
+
+    private fun setupLocale() {
+        val language = LocaleHelper.getLanguage(this)
+        LocaleHelper.setLocale(this, language)
     }
 }

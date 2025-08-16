@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime.model
+package com.privacyaccountofliu.openhourlychime.model.tools
 
 import android.annotation.SuppressLint
 import android.app.AlarmManager

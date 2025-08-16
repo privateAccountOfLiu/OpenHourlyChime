@@ -37,6 +37,15 @@
     <PreferenceCategory app:title="@string/set6">
 
         <ListPreference
+            app:entries="@array/language_entries"
+            app:entryValues="@array/language_values"
+            app:defaultValue="Chinese"
+            app:key="language_preference"
+            app:summary="%s"
+            app:title="@string/set16"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
             app:entries="@array/theme_entries"
             app:entryValues="@array/theme_values"
             app:defaultValue="common_theme"

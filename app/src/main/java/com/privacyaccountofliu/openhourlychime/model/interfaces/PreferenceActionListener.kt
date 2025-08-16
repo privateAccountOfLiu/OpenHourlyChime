@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime.model
+package com.privacyaccountofliu.openhourlychime.model.interfaces
 
 interface PreferenceActionListener {
     fun onPreferenceClicked(key: String)

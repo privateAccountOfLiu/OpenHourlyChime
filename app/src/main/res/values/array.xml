@@ -6,16 +6,24 @@
         <item>alarm_sound_control</item>
     </string-array>
     <string-array name="sound_choice_entries">
-        <item>媒体音量控制</item>
-        <item>提示音量控制</item>
-        <item>闹钟音量控制</item>
+        <item>@string/array_media_player</item>
+        <item>@string/array_notification_player</item>
+        <item>@string/array_alarm_player</item>
     </string-array>
     <string-array name="theme_values">
         <item>common_theme</item>
         <item>night_theme</item>
     </string-array>
     <string-array name="theme_entries">
-        <item>常规主题</item>
-        <item>夜间主题</item>
+        <item>@string/common_theme</item>
+        <item>@string/night_theme</item>
+    </string-array>
+    <string-array name="language_values">
+        <item>Chinese</item>
+        <item>English</item>
+    </string-array>
+    <string-array name="language_entries">
+        <item>@string/Chinese</item>
+        <item>@string/English</item>
     </string-array>
 </resources>

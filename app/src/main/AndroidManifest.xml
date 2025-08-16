@@ -65,7 +65,7 @@
 
         <!-- 闹钟广播接收器 -->
         <receiver
-            android:name=".model.AlarmReceiver"
+            android:name=".model.tools.AlarmReceiver"
             android:enabled="true"
             android:exported="false"
             android:priority="10000">

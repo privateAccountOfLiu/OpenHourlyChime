@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime.model
+package com.privacyaccountofliu.openhourlychime.model.events
 
 import android.media.AudioAttributes
 

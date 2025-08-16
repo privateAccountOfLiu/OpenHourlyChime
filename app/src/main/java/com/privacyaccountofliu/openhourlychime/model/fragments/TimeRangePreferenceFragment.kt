@@ -8,7 +8,7 @@ import android.view.View
 import android.widget.TimePicker
 import androidx.preference.PreferenceDialogFragmentCompat
 import com.privacyaccountofliu.openhourlychime.R
-import com.privacyaccountofliu.openhourlychime.model.ToastUtil
+import com.privacyaccountofliu.openhourlychime.model.tools.ToastUtil
 import com.privacyaccountofliu.openhourlychime.widget.TimeRangePreference
 
 class TimeRangePreferenceFragment : PreferenceDialogFragmentCompat() {
@@ -39,7 +39,7 @@ class TimeRangePreferenceFragment : PreferenceDialogFragmentCompat() {
             val endMinutes = endPicker.hour * 60 + endPicker.minute
 
             if (startMinutes >= endMinutes) {
-                ToastUtil.showToast(requireContext(), "开始时间不能晚于结束时间")
+                ToastUtil.showToast(requireContext(), getString(R.string.toast_3))
                 return
             }
 

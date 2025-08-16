@@ -8,7 +8,7 @@ import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
+import com.privacyaccountofliu.openhourlychime.model.tools.AlarmReceiver
 
 @SuppressLint("SpecifyJobSchedulerIdRange")
 class KeepAliveJobService : JobService() {
@@ -28,8 +28,8 @@ class KeepAliveJobService : JobService() {
                 JobIds.KEEP_ALIVE_JOB,
                 ComponentName(context, KeepAliveJobService::class.java))
                     .setPersisted(true)
-                    .setMinimumLatency(5 * 60 * 1000)
-                    .setOverrideDeadline(10 * 60 * 1000)
+                    .setMinimumLatency(1 * 60 * 1000)
+                    .setOverrideDeadline(3 * 60 * 1000)
                     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_NONE)
                     .setRequiresCharging(false)
                     .setRequiresDeviceIdle(false)

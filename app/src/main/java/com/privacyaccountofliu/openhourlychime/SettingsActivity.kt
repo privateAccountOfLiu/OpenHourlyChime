@@ -3,11 +3,12 @@ package com.privacyaccountofliu.openhourlychime
 import android.content.Intent
 import android.os.Bundle
 import com.privacyaccountofliu.openhourlychime.databinding.ActivitySettingsBinding
-import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
-import com.privacyaccountofliu.openhourlychime.model.PreferenceActionListener
-import com.privacyaccountofliu.openhourlychime.model.services.TimeService
-import com.privacyaccountofliu.openhourlychime.model.Tools
+import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
 import com.privacyaccountofliu.openhourlychime.model.fragments.SettingsFragment
+import com.privacyaccountofliu.openhourlychime.model.interfaces.PreferenceActionListener
+import com.privacyaccountofliu.openhourlychime.model.services.TimeService
+import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
+import com.privacyaccountofliu.openhourlychime.model.tools.Tools
 import org.greenrobot.eventbus.EventBus
 
 class SettingsActivity : BaseActivity(), PreferenceActionListener {
@@ -73,8 +74,17 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
                 updateTtsSoundConfig(soundPreferencesOpi)
             }
             "time_range_preference" -> {
-                val timeRange = newValue as List<Int>
+                val timeRange = newValue as List<*>
                 updateTimeRangeConfig(timeRange)
+            }
+            "notifications_enabled" -> {
+                val isNotice = newValue as Boolean
+                updateIsNoticeConfig(isNotice)
+            }
+            "language_preference" -> {
+                val language = newValue.toString()
+                LocaleHelper.setLocale(this, language)
+                recreate()
             }
         }
     }
@@ -87,12 +97,16 @@ class SettingsActivity : BaseActivity(), PreferenceActionListener {
         startService(intent)
     }
 
+    private fun updateIsNoticeConfig(isNotice: Boolean) {
+        EventBus.getDefault().post(isNotice)
+    }
+
     private fun updateTtsSoundConfig(soundPreferencesOpi: String?) {
         val attributes = Tools().yieldAudioAttr(soundPreferencesOpi)
         EventBus.getDefault().post(AudioConfigEvent(attributes))
     }
 
-    private fun updateTimeRangeConfig(timeRange: List<Int>) {
+    private fun updateTimeRangeConfig(timeRange: List<*>) {
         EventBus.getDefault().post(timeRange)
     }
 }

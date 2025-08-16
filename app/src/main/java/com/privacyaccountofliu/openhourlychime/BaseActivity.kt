@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
+import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 
 @Suppress("DEPRECATION")
 abstract class BaseActivity : AppCompatActivity() {
@@ -18,12 +19,11 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(getLayoutResId())
+        updateLocale()
 
-        // 初始化导航抽屉组件
         drawerLayout = findViewById(R.id.drawer_layout)
         navView = findViewById(R.id.nav_view)
 
-        // 设置工具栏和导航监听
         setupNavigation()
         setupToolbar()
 
@@ -50,12 +50,17 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateLocale()
+    }
+
     abstract fun getLayoutResId(): Int
 
     protected open fun setupToolbar() {
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_menu) // 汉堡菜单图标
+            setHomeAsUpIndicator(R.drawable.ic_menu)
         }
     }
 
@@ -94,4 +99,11 @@ abstract class BaseActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
+
+    private fun updateLocale() {
+        val language = LocaleHelper.getLanguage(this)
+        val context = LocaleHelper.setLocale(this, language)
+        resources.updateConfiguration(context.resources.configuration, resources.displayMetrics)
+    }
+
 }

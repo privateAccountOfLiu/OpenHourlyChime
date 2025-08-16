@@ -17,8 +17,8 @@ import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.MainActivity
 import com.privacyaccountofliu.openhourlychime.R
-import com.privacyaccountofliu.openhourlychime.model.AudioConfigEvent
-import com.privacyaccountofliu.openhourlychime.model.Tools
+import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.tools.Tools
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -32,18 +32,23 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     private var isTtsReady = false
     private var pendingSpeakRequest: String? = null
     private var timeRange: List<Int> = listOf(DEFAULT_START, DEFAULT_END)
+    private var isNotice: Boolean = true
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         initTTS()
-        startForeground(notificationId, createNotification())
         EventBus.getDefault().register(this)
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         val soundPreferencesOpi =
             sharedPreferences.getString("sound_preference", "media_sound_control")
+        val timeRangePreferencesOpi =
+            sharedPreferences.getString("time_range_preference", "$DEFAULT_START-$DEFAULT_END")
+        isNotice = sharedPreferences.getBoolean("notifications_enabled", true)
         defaultAudioAttributes = Tools().yieldAudioAttr(soundPreferencesOpi)
+        timeRange = Tools().timeSplit(timeRangePreferencesOpi!!)
+        startForeground(notificationId, createNotification())
     }
 
     override fun onInit(status: Int) {
@@ -97,6 +102,11 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         DEFAULT_START = event[1]
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onIsNoticeConfig(tag: Boolean) {
+        isNotice = tag
+    }
+
     private fun createNotification(): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -106,14 +116,15 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         )
 
         return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
-            .setContentTitle("整点报时服务运行中")
-            .setContentText("将在每小时整点语音播报时间")
+            .setContentTitle(getString(R.string.notice_1))
+            .setContentText(getString(R.string.notice_2))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setVisibility(if (isNotice) NotificationCompat.VISIBILITY_PUBLIC else NotificationCompat.VISIBILITY_PRIVATE)
             .build()
     }
 
@@ -125,6 +136,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
+    @SuppressLint("StringFormatMatches")
     private fun handleHourlyChime() {
         val now = Calendar.getInstance()
         val defaultZoneId = TimeZone.getDefault().displayName
@@ -132,23 +144,25 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val minute = now.get(Calendar.MINUTE)
         if (timeRange[0] <= hour * 60 + minute && hour * 60 + minute <= timeRange[1]) {
             val timeText = when (hour) {
-                0 -> "整点播报：现在是{$defaultZoneId} 午夜 12 点整"
-                12 -> "整点播报：现在是{$defaultZoneId} 中午 12 点整"
-                else -> "整点播报：现在是{$defaultZoneId} $hour 点整"
+                0 -> getString(R.string.TTS_1, defaultZoneId)
+                12 -> getString(R.string.TTS_2, defaultZoneId)
+                else -> getString(R.string.TTS_3, defaultZoneId, hour)
             }
             speak(timeText)
             sendChimeNotification(timeText)
         }
     }
 
+    @SuppressLint("StringFormatMatches")
     private fun handleTestChime() {
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val minute = now.get(Calendar.MINUTE)
         val defaultZoneId = TimeZone.getDefault().displayName
         Log.d("TimeService", "$timeRange")
-        val timeText = "测试报时：现在是$defaultZoneId ${hour}点${minute}分"
+        val timeText = getString(R.string.TTS_4, defaultZoneId, hour, minute)
         speak(timeText)
+        Log.d("TimeRange", "时间范围: $timeRange")
     }
 
     private fun sendChimeNotification(timeText: String) {
@@ -163,7 +177,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         )
 
         val notification = NotificationCompat.Builder(this, "alarm_channel_open_hourly_chime")
-            .setContentTitle("整点报时")
+            .setContentTitle(getString(R.string.notice_3))
             .setContentText(timeText)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)

@@ -1,4 +1,4 @@
-package com.privacyaccountofliu.openhourlychime.model
+package com.privacyaccountofliu.openhourlychime.model.tools
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
@@ -51,7 +51,7 @@ class BatteryOptimizationHelper(private val context: Context) {
         context.startActivity(intent)
     }
 
-    fun isXiaomiDevice(): Boolean {
+    private fun isXiaomiDevice(): Boolean {
         return Build.BRAND.equals("xiaomi", ignoreCase = true) ||
                 Build.MANUFACTURER.equals("xiaomi", ignoreCase = true) ||
                 Build.BRAND.equals("redmi", ignoreCase = true) ||

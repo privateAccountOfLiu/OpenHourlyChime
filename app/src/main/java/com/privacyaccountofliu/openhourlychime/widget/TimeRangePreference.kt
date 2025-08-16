@@ -8,6 +8,7 @@ import android.os.Parcelable
 import android.util.AttributeSet
 import android.util.Log
 import androidx.preference.DialogPreference
+import com.privacyaccountofliu.openhourlychime.R
 
 class TimeRangePreference(context: Context, attrs: AttributeSet) :
     DialogPreference(context, attrs) {
@@ -21,9 +22,9 @@ class TimeRangePreference(context: Context, attrs: AttributeSet) :
     var onTimeRangeChangeListener: OnTimeRangeChangeListener? = null
 
     init {
-        dialogTitle = "选择时间范围"
-        positiveButtonText = "确认"
-        negativeButtonText = "取消"
+        dialogTitle = context.getString(R.string.time_range_dialog_title)
+        positiveButtonText = context.getString(R.string.Yes)
+        negativeButtonText = context.getString(R.string.Cancel)
     }
 
     override fun onSetInitialValue(defaultValue: Any?) {

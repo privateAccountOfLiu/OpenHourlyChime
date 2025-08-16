@@ -15,10 +15,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
-import com.privacyaccountofliu.openhourlychime.model.AlarmReceiver
-import com.privacyaccountofliu.openhourlychime.model.BatteryOptimizationHelper
+import com.privacyaccountofliu.openhourlychime.model.tools.AlarmReceiver
+import com.privacyaccountofliu.openhourlychime.model.tools.BatteryOptimizationHelper
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
-import com.privacyaccountofliu.openhourlychime.model.ToastUtil
+import com.privacyaccountofliu.openhourlychime.model.tools.ToastUtil
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
@@ -31,7 +31,7 @@ class MainActivity : BaseActivity(){
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
-            ToastUtil.showToast(this, "需要正常权限才能完整运行")
+            ToastUtil.showToast(this, getString(R.string.toast_4))
         }
     }
 
@@ -89,7 +89,7 @@ class MainActivity : BaseActivity(){
     private fun startAlarmService() {
         startAlarm()
         startServiceWithPermissionCheck()
-        Toast.makeText(this, "整点报时服务已启动", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_5), Toast.LENGTH_SHORT).show()
     }
 
     private fun startServiceWithPermissionCheck() {
@@ -106,12 +106,12 @@ class MainActivity : BaseActivity(){
                         this,
                         permission )
                     == PackageManager.PERMISSION_DENIED) {
-                    ToastUtil.showToast(this, "需要正常权限才能完整运行")
+                    ToastUtil.showToast(this, getString(R.string.toast_4))
                 }
                 }
             }
         } else {
-            Toast.makeText(this, "获取权限失败请手动设置！", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_6), Toast.LENGTH_SHORT).show()
         }
         TimeService.startService(this)
     }
@@ -119,7 +119,7 @@ class MainActivity : BaseActivity(){
     private fun stopAlarmService() {
         alarmManager.cancel(pendingIntent)
         TimeService.stopService(this)
-        Toast.makeText(this, "整点报时服务已停止", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_7), Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("SimpleDateFormat")
@@ -156,12 +156,12 @@ class MainActivity : BaseActivity(){
 
     private fun showWhitelistRequestDialog() {
         AlertDialog.Builder(this)
-            .setTitle("后台运行权限")
-            .setMessage("为保证应用后台正常运行，请开启省电白名单和自启动权限")
-            .setPositiveButton("去设置") { _, _ ->
+            .setTitle(getString(R.string.dialog_white_list_battery_title))
+            .setMessage(getString(R.string.dialog_white_list_battery_msg))
+            .setPositiveButton(getString(R.string.ToSet)) { _, _ ->
                 batteryHelper.guideUserToBatteryWhitelist()
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(getString(R.string.Cancel), null)
             .show()
     }
 }
