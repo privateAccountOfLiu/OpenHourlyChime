@@ -26,6 +26,7 @@ import org.greenrobot.eventbus.ThreadMode
 import java.util.Locale
 
 
+@Suppress("DEPRECATION")
 class TimeService : Service(), TextToSpeech.OnInitListener {
     private val notificationId = 1001
     private val appContext: Context by lazy { applicationContext }
@@ -56,10 +57,10 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            Log.w("Language", LocaleHelper.getLanguage(this))
-            val result = when (LocaleHelper.getLanguage(this)) {
-                "Chinese" -> textToSpeech.setLanguage(Locale.CHINA)
-                "English" -> textToSpeech.setLanguage(Locale.ENGLISH)
+            Log.w("Language", appContext.resources.configuration.locale.language)
+            val result = when (appContext.resources.configuration.locale.language) {
+                "zh" -> textToSpeech.setLanguage(Locale.CHINA)
+                "en" -> textToSpeech.setLanguage(Locale.US)
                 else -> textToSpeech.setLanguage(Locale.CHINA)
             }
             isTtsReady = if (result != TextToSpeech.LANG_MISSING_DATA &&
@@ -69,7 +70,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
                 textToSpeech.setAudioAttributes(defaultAudioAttributes)
                 true
             } else {
-                Log.e("TTS", "不支持中文语音")
+                Log.e("TTS", "TTS缺失数据")
                 false
             }
 
