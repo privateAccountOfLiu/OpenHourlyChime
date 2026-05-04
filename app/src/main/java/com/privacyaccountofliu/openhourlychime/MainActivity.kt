@@ -20,18 +20,31 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -199,48 +212,112 @@ class MainActivity : ComponentActivity() {
             drawerState = drawerState,
             drawerContent = {
                 ModalDrawerSheet(
-                    modifier = Modifier.width(screenWidth * 0.5f)
+                    modifier = Modifier
+                        .width(screenWidth * 0.55f),
+                    drawerContainerColor = MaterialTheme.colorScheme.surface,
+                    drawerContentColor = MaterialTheme.colorScheme.onSurface
                 ) {
-                    // Drawer header
-                    Column(
+                    // Header with gradient
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(BlueMiku)
-                            .padding(16.dp)
+                            .height(180.dp)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        BlueMiku,
+                                        Color(0xFF26A69A),
+                                        Color(0xFF00897B)
+                                    ),
+                                    start = Offset(0f, 0f),
+                                    end = Offset(0f, Float.POSITIVE_INFINITY)
+                                )
+                            )
                             .statusBarsPadding(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = androidx.compose.ui.graphics.Color.Unspecified
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.welcome),
-                            color = androidx.compose.ui.graphics.Color(0xFF37474F),
-                            fontSize = 14.sp
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // App icon in circular background
+                            Box(
+                                modifier = Modifier
+                                    .size(68.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.Unspecified
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(R.string.msg3).trim(),
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
 
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        label = { Text(stringResource(R.string.str10)) },
+                    Spacer(Modifier.height(8.dp))
+
+                    // Navigation items
+                    DrawerNavItem(
+                        icon = Icons.Outlined.Home,
+                        selectedIcon = Icons.Filled.Home,
+                        label = stringResource(R.string.str10),
                         selected = currentScreen == Screen.Home,
                         onClick = {
                             currentScreen = Screen.Home
                             scope.launch { drawerState.close() }
                         }
                     )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        label = { Text(stringResource(R.string.str11)) },
+                    DrawerNavItem(
+                        icon = Icons.Outlined.Settings,
+                        selectedIcon = Icons.Filled.Settings,
+                        label = stringResource(R.string.str11),
                         selected = currentScreen == Screen.Settings,
                         onClick = {
                             currentScreen = Screen.Settings
                             scope.launch { drawerState.close() }
                         }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // About item
+                    DrawerNavItem(
+                        icon = Icons.Outlined.Info,
+                        selectedIcon = Icons.Filled.Info,
+                        label = stringResource(R.string.str12),
+                        selected = currentScreen == Screen.About,
+                        onClick = {
+                            currentScreen = Screen.About
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Bottom caption
+                    Text(
+                        text = stringResource(R.string.msg2),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
@@ -439,5 +516,45 @@ class MainActivity : ComponentActivity() {
                 }
             }
             .show()
+    }
+}
+
+@Composable
+private fun DrawerNavItem(
+    icon: ImageVector,
+    selectedIcon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val iconTint = if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurfaceVariant
+    val bgColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+    else Color.Transparent
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (selected) selectedIcon else icon,
+            contentDescription = label,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
