@@ -7,6 +7,7 @@ import android.content.Context
 import com.privacyaccountofliu.openhourlychime.R
 import com.privacyaccountofliu.openhourlychime.model.services.KeepAliveJobService
 import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
+import com.privacyaccountofliu.openhourlychime.model.tools.LogUtil
 
 class App : Application() {
 
@@ -15,6 +16,8 @@ class App : Application() {
         setupLocale()
         createNotificationChannels()
         KeepAliveJobService.scheduleJob(this)
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        LogUtil.init(prefs.getBoolean("advanced_logging", false))
     }
 
     private fun createNotificationChannels() {

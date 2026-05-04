@@ -4,7 +4,7 @@ package com.privacyaccountofliu.openhourlychime.model.tools
 
 import android.content.Context
 import android.content.res.Configuration
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 import androidx.core.content.edit
 import java.util.Locale
 

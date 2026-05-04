@@ -8,108 +8,390 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.privacyaccountofliu.openhourlychime.databinding.ActivityMainBinding
+import androidx.core.os.LocaleListCompat
+import androidx.preference.PreferenceManager
+import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.tools.AlarmReceiver
+import com.privacyaccountofliu.openhourlychime.model.tools.AppRestartManager.restartApp
 import com.privacyaccountofliu.openhourlychime.model.tools.BatteryOptimizationHelper
+import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 import com.privacyaccountofliu.openhourlychime.model.tools.ToastUtil
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import com.privacyaccountofliu.openhourlychime.model.tools.Tools
+import com.privacyaccountofliu.openhourlychime.ui.screens.AboutScreen
+import com.privacyaccountofliu.openhourlychime.ui.screens.MainScreen
+import com.privacyaccountofliu.openhourlychime.ui.screens.SettingsScreen
+import com.privacyaccountofliu.openhourlychime.ui.screens.SettingsState
+import com.privacyaccountofliu.openhourlychime.ui.theme.BlueMiku
+import com.privacyaccountofliu.openhourlychime.ui.theme.HourlyChimeTheme
+import kotlinx.coroutines.launch
+import org.greenrobot.eventbus.EventBus
 
-class MainActivity : BaseActivity(){
-    private lateinit var binding: ActivityMainBinding
+enum class Screen { Home, Settings, About }
+
+class MainActivity : ComponentActivity() {
+
     private lateinit var alarmManager: AlarmManager
     private lateinit var pendingIntent: PendingIntent
     private lateinit var batteryHelper: BatteryOptimizationHelper
+
+    private var pendingServiceStart = false
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (!isGranted) {
+        if (isGranted && pendingServiceStart) {
+            pendingServiceStart = false
+            TimeService.startService(this)
+            startAlarmInternal()
+        } else if (!isGranted) {
             ToastUtil.showToast(this, getString(R.string.toast_4))
         }
     }
 
-    override fun getLayoutResId() = R.layout.activity_main
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        pendingIntent = createAlarmPendingIntent()
-        drawerLayout = findViewById(R.id.drawer_layout)
-        navView = findViewById(R.id.nav_view)
-        navView.setCheckedItem(R.id.nav_home)
-        setupToolbar()
-        setupNavigation()
-
-
-        supportActionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_menu)
+    private val ringtonePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
         }
-
-        batteryHelper = BatteryOptimizationHelper(this)
-        checkBatteryOptimizationStatus()
-
-        binding.switchOpenService.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                startAlarmService()
-            } else {
-                stopAlarmService()
-            }
+        if (uri != null) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            prefs.edit().putString("chime_system_uri", uri.toString()).apply()
+            prefs.edit().putString("chime_sound_preference", "system_picker").apply()
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        navView.setCheckedItem(R.id.nav_home)
+    override fun attachBaseContext(base: Context) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(base)
+        val lang = prefs.getString("language_preference", "Chinese") ?: "Chinese"
+        val localeTag = when (lang) {
+            "English" -> "en"
+            else -> "zh-CN"
+        }
+        val configCtx = LocaleHelper.setLocale(base, lang)
+        super.attachBaseContext(configCtx)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        pendingIntent = createAlarmPendingIntent()
+        batteryHelper = BatteryOptimizationHelper(this)
+
+        // Restore theme from preferences and apply immediately
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val savedTheme = prefs.getString("theme_preference", "common_theme") ?: "common_theme"
+        AppCompatDelegate.setDefaultNightMode(
+            if (savedTheme == "night_theme") AppCompatDelegate.MODE_NIGHT_YES
+            else AppCompatDelegate.MODE_NIGHT_NO
+        )
+
+        // Apply language
+        val lang = prefs.getString("language_preference", "Chinese") ?: "Chinese"
+        val localeTag = when (lang) {
+            "English" -> "en"
+            else -> "zh-CN"
+        }
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(localeTag))
+
+        setContent {
+            val isDark = savedTheme == "night_theme"
+            HourlyChimeTheme(darkTheme = isDark) {
+                MainApp(savedTheme)
+            }
+        }
+
+        checkBatteryOptimizationStatus()
     }
 
     private fun createAlarmPendingIntent(): PendingIntent {
         val intent = Intent(this, AlarmReceiver::class.java)
         return PendingIntent.getBroadcast(
-            this,
-            0,
-            intent,
+            this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
+    private fun isAlarmSet(): Boolean {
+        return try {
+            val hasAlarm = PendingIntent.getBroadcast(
+                this, 0, Intent(this, AlarmReceiver::class.java),
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            hasAlarm != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun MainApp(savedTheme: String) {
+        var currentScreen by remember { mutableStateOf(Screen.Home) }
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val prefs = remember { PreferenceManager.getDefaultSharedPreferences(this@MainActivity) }
+        val scope = rememberCoroutineScope()
+        val config = LocalConfiguration.current
+        val screenWidth = config.screenWidthDp.dp
+
+        // Service state - check actual alarm state on first composition
+        var isServiceRunning by remember { mutableStateOf(isAlarmSet()) }
+        var currentTheme by remember { mutableStateOf(savedTheme) }
+
+        val settingsState = remember {
+            mutableStateOf(
+                SettingsState(
+                    notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
+                    soundPreference = prefs.getString("sound_preference", "media_sound_control") ?: "media_sound_control",
+                    timeRangeStart = (prefs.getString("time_range_preference", "420-1320") ?: "420-1320").split("-").getOrNull(0)?.toIntOrNull() ?: 420,
+                    timeRangeEnd = (prefs.getString("time_range_preference", "420-1320") ?: "420-1320").split("-").getOrNull(1)?.toIntOrNull() ?: 1320,
+                    language = prefs.getString("language_preference", "Chinese") ?: "Chinese",
+                    theme = savedTheme,
+                    advancedLogging = prefs.getBoolean("advanced_logging", false),
+                    timeFormat = prefs.getString("time_format_preference", "24") ?: "24",
+                    chimeMode = prefs.getString("chime_mode_preference", "tts") ?: "tts",
+                    chimeSound = prefs.getString("chime_sound_preference", "builtin_bell") ?: "builtin_bell",
+                    chimeSystemUri = prefs.getString("chime_system_uri", null)
+                )
+            )
+        }
+
+        val screenTitle = when (currentScreen) {
+            Screen.Home -> stringResource(R.string.app_name)
+            Screen.Settings -> stringResource(R.string.str9)
+            Screen.About -> stringResource(R.string.str12)
+        }
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.width(screenWidth * 0.5f)
+                ) {
+                    // Drawer header
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(BlueMiku)
+                            .padding(16.dp)
+                            .statusBarsPadding(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = androidx.compose.ui.graphics.Color.Unspecified
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.welcome),
+                            color = androidx.compose.ui.graphics.Color(0xFF37474F),
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text(stringResource(R.string.str10)) },
+                        selected = currentScreen == Screen.Home,
+                        onClick = {
+                            currentScreen = Screen.Home
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        label = { Text(stringResource(R.string.str11)) },
+                        selected = currentScreen == Screen.Settings,
+                        onClick = {
+                            currentScreen = Screen.Settings
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                }
+            }
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(screenTitle) },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.str9))
+                            }
+                        }
+                    )
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.padding(paddingValues)) {
+                    when (currentScreen) {
+                        Screen.Home -> MainScreen(
+                            isServiceRunning = isServiceRunning,
+                            onToggleService = { enable ->
+                                if (enable) startAlarmService()
+                                else stopAlarmService()
+                                isServiceRunning = enable
+                            }
+                        )
+                        Screen.Settings -> SettingsScreen(
+                            state = settingsState.value,
+                            onNotificationChanged = { enabled ->
+                                prefs.edit().putBoolean("notifications_enabled", enabled).apply()
+                                settingsState.value = settingsState.value.copy(notificationsEnabled = enabled)
+                                EventBus.getDefault().post(enabled)
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onSoundChanged = { sound ->
+                                prefs.edit().putString("sound_preference", sound).apply()
+                                settingsState.value = settingsState.value.copy(soundPreference = sound)
+                                EventBus.getDefault().post(AudioConfigEvent(Tools().yieldAudioAttr(sound)))
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onTimeRangeChanged = { start, end ->
+                                prefs.edit().putString("time_range_preference", "$start-$end").apply()
+                                settingsState.value = settingsState.value.copy(timeRangeStart = start, timeRangeEnd = end)
+                                EventBus.getDefault().post(listOf(start, end))
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onTestChime = {
+                                val intent = Intent(this@MainActivity, TimeService::class.java).apply {
+                                    action = "ACTION_TEST_CHIME"
+                                }
+                                startForegroundService(intent)
+                                Toast.makeText(this@MainActivity, getString(R.string.toast_2), Toast.LENGTH_SHORT).show()
+                            },
+                            onLanguageChanged = { lang ->
+                                prefs.edit().putString("language_preference", lang).apply()
+                                settingsState.value = settingsState.value.copy(language = lang)
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                                showRestartDialog()
+                            },
+                            onThemeChanged = { theme ->
+                                prefs.edit().putString("theme_preference", theme).apply()
+                                settingsState.value = settingsState.value.copy(theme = theme)
+                                currentTheme = theme
+                                AppCompatDelegate.setDefaultNightMode(
+                                    if (theme == "night_theme") AppCompatDelegate.MODE_NIGHT_YES
+                                    else AppCompatDelegate.MODE_NIGHT_NO
+                                )
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                                showRestartDialog()
+                            },
+                            onAdvancedLoggingChanged = { enabled ->
+                                prefs.edit().putBoolean("advanced_logging", enabled).apply()
+                                settingsState.value = settingsState.value.copy(advancedLogging = enabled)
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onTimeFormatChanged = { format ->
+                                prefs.edit().putString("time_format_preference", format).apply()
+                                settingsState.value = settingsState.value.copy(timeFormat = format)
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onChimeModeChanged = { mode ->
+                                prefs.edit().putString("chime_mode_preference", mode).apply()
+                                settingsState.value = settingsState.value.copy(chimeMode = mode)
+                                ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                            },
+                            onChimeSoundChanged = { sound ->
+                                if (sound == "system_picker") {
+                                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, getString(R.string.set19))
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, false)
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                    }
+                                    ringtonePickerLauncher.launch(intent)
+                                } else {
+                                    prefs.edit().putString("chime_sound_preference", sound).apply()
+                                    settingsState.value = settingsState.value.copy(chimeSound = sound)
+                                    ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
+                                }
+                            },
+                            onChimeSystemUriChanged = {},
+                            onAboutClick = { currentScreen = Screen.About }
+                        )
+                        Screen.About -> AboutScreen()
+                    }
+                }
+            }
+        }
+    }
+
     private fun startAlarmService() {
-        startAlarm()
-        startServiceWithPermissionCheck()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                pendingServiceStart = true
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+        }
+        TimeService.startService(this)
+        startAlarmInternal()
         Toast.makeText(this, getString(R.string.toast_5), Toast.LENGTH_SHORT).show()
     }
 
-    private fun startServiceWithPermissionCheck() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val permissionList = listOf(Manifest.permission.POST_NOTIFICATIONS)
-            for (permission in permissionList) {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        permission
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissionLauncher.launch(permission)
-                } else { if (ContextCompat.checkSelfPermission(
-                        this,
-                        permission )
-                    == PackageManager.PERMISSION_DENIED) {
-                    ToastUtil.showToast(this, getString(R.string.toast_4))
+    private fun startAlarmInternal() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:$packageName")
                 }
-                }
+                startActivity(intent)
+                ToastUtil.showToast(this, getString(R.string.toast_8))
+                return
             }
-        } else {
-            Toast.makeText(this, getString(R.string.toast_6), Toast.LENGTH_SHORT).show()
         }
-        TimeService.startService(this)
+        val calendar = calculateNextAlarmTime()
+        try {
+            // setAlarmClock gives highest priority - reliable even in Doze mode
+            val alarmInfo = AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent)
+            alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+        } catch (e: SecurityException) {
+            android.util.Log.e("Alarm", "Error setting alarm clock, falling back", e)
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent
+                )
+            } catch (e2: Exception) {
+                android.util.Log.e("Alarm", "Fallback alarm also failed", e2)
+            }
+        }
     }
 
     private fun stopAlarmService() {
@@ -118,29 +400,13 @@ class MainActivity : BaseActivity(){
         Toast.makeText(this, getString(R.string.toast_7), Toast.LENGTH_SHORT).show()
     }
 
-    @SuppressLint("SimpleDateFormat")
-    private fun startAlarm() {
-        val calendar = calculateNextAlarmTime()
-
-        try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-            Log.d("Alarm", "整点闹钟已设置: ${SimpleDateFormat("HH:mm").format(calendar.time)}")
-        } catch (e: SecurityException) {
-            Log.e("Alarm", "设置闹钟时权限错误", e)
-        }
-    }
-
-    private fun calculateNextAlarmTime(): Calendar {
-        return Calendar.getInstance().apply {
+    private fun calculateNextAlarmTime(): java.util.Calendar {
+        return java.util.Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            add(Calendar.HOUR_OF_DAY, 1) // 下一个整点
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+            add(java.util.Calendar.HOUR_OF_DAY, 1)
         }
     }
 
@@ -158,6 +424,20 @@ class MainActivity : BaseActivity(){
                 batteryHelper.guideUserToBatteryWhitelist()
             }
             .setNegativeButton(getString(R.string.Cancel), null)
+            .show()
+    }
+
+    private fun showRestartDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_need_restart_title))
+            .setMessage(getString(R.string.dialog_need_restart_msg))
+            .setPositiveButton(getString(R.string.Yes)) { _, _ ->
+                runOnUiThread {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        applicationContext.restartApp()
+                    }, 200)
+                }
+            }
             .show()
     }
 }

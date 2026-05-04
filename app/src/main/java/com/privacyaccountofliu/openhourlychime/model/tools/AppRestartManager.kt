@@ -31,7 +31,11 @@ object AppRestartManager {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             putExtra("IS_RESTART", true)
         }
-        startActivity(intent)
+        if (intent != null) {
+            startActivity(intent)
+        } else {
+            Log.e("AppRestart", "getLaunchIntentForPackage returned null")
+        }
         android.os.Process.killProcess(android.os.Process.myPid())
     }
 
@@ -39,14 +43,18 @@ object AppRestartManager {
         val restartIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            restartIntent,
-            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 100, pendingIntent)
+        if (restartIntent != null) {
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                restartIntent,
+                PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 100, pendingIntent)
+        } else {
+            Log.e("AppRestart", "getLaunchIntentForPackage returned null for AlarmManager restart")
+        }
         android.os.Process.killProcess(android.os.Process.myPid())
     }
 }

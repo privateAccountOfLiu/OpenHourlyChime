@@ -29,7 +29,15 @@ class Tools {
     }
 
     fun timeSplit(timeS: String): List<Int> {
-        val timeList = timeS.split("-")
-        return listOf(timeList[0].toInt(), timeList[1].toInt())
+        val parts = timeS.split("-")
+        if (parts.size != 2) return listOf(DEFAULT_START, DEFAULT_END)
+        val start = parts[0].toIntOrNull() ?: DEFAULT_START
+        val end = parts[1].toIntOrNull() ?: DEFAULT_END
+        return listOf(start, end)
+    }
+
+    companion object {
+        private const val DEFAULT_START = 420
+        private const val DEFAULT_END = 1320
     }
 }

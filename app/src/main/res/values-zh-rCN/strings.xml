@@ -3,18 +3,13 @@
     <string name="str1">启动报时服务</string>
     <string name="str2">停止报时服务</string>
     <string name="str3">测试报时</string>
-    <string name="str4">播报频率</string>
-    <string name="str5">整点</string>
-    <string name="str6">半小时</string>
-    <string name="str7">15分钟</string>
-    <string name="str8">保存设置</string>
     <string name="str9">设置</string>
     <string name="str10">主页</string>
     <string name="str11">设置</string>
     <string name="nav_head_icon">nav_head_icon</string>
     <string name="welcome">Welcome to use OpenHourlyChime!</string>
     <string name="msg2">Author: privateAccountOfLiu</string>
-    <string name="msg3">Version: 1.1\n</string>
+    <string name="msg3">Version: 2.0\n</string>
     <string name="msg4">Github:</string>
     <string name="msg5">https://github.com/privateAccountOfLiu</string>
     <string name="msg6">/OpenHourlyChime\n</string>
@@ -29,10 +24,10 @@
     <string name="set4">音量控制</string>
     <string name="set5">进行测试播报</string>
     <string name="set6">高级设置</string>
-    <string name="set7">应用主题（暂未完善）</string>
+    <string name="set7">应用主题</string>
     <string name="set8">记录基本信息</string>
     <string name="set9">记录详细调试信息</string>
-    <string name="set10">启用高级日志（暂未完善）</string>
+    <string name="set10">启用高级日志</string>
     <string name="set11">查看应用版本和开发者信息</string>
     <string name="set12">关于应用</string>
     <string name="set13">开始时间</string>
@@ -45,8 +40,9 @@
     <string name="notice_2">将在每小时整点语音播报时间</string>
     <string name="TTS_1">整点播报：现在是{%1$s} 午夜 12 点整</string>
     <string name="TTS_2">整点播报：现在是{%1$s} 中午 12 点整</string>
-    <string name="TTS_3">整点播报：现在是{%1$s} %2$s 点整</string>
-    <string name="TTS_4">测试报时：现在是%1$s %2$s点%3$s分</string>
+    <string name="TTS_3">整点播报：现在是{%1$s} %2$d 点整</string>
+    <string name="TTS_4">测试报时：现在是%1$s %2$d点%3$d分</string>
+    <string name="TTS_5">整点播报：现在是{%1$s} %3$s %2$d 点整</string>
     <string name="notice_3">整点报时</string>
     <string name="channel_1">整点报时服务</string>
     <string name="channel_2">后台服务运行状态通知</string>
@@ -70,7 +66,18 @@
     <string name="Chinese">中文</string>
     <string name="English">English</string>
     <string name="set16">语言</string>
+    <string name="set17">时间格式</string>
+    <string name="format_12h">12小时制</string>
+    <string name="format_24h">24小时制</string>
+    <string name="set18">提示音模式</string>
+    <string name="chime_mode_tts">语音播报</string>
+    <string name="chime_mode_custom">自定义音频</string>
+    <string name="set19">选择提示音</string>
+    <string name="chime_builtin_bell">铃声</string>
+    <string name="chime_builtin_gong">铜锣</string>
+    <string name="chime_builtin_chime">风铃</string>
+    <string name="chime_system_pick">从系统铃声选择…</string>
+    <string name="toast_8">整点报时需要精确闹钟权限</string>
     <string name="dialog_need_restart_title">需要重启</string>
     <string name="dialog_need_restart_msg">此项设置需要重启才能生效</string>
-
 </resources>
