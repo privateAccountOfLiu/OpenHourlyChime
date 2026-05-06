@@ -11,15 +11,22 @@ import android.content.res.AssetFileDescriptor
 import android.icu.util.Calendar
 import android.icu.util.TimeZone
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Bundle
 import android.os.IBinder
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.MainActivity
 import com.privacyaccountofliu.openhourlychime.R
 import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.events.ChimeConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.events.NoticeEnabledEvent
+import com.privacyaccountofliu.openhourlychime.model.events.TimeRangeEvent
 import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
 import com.privacyaccountofliu.openhourlychime.model.tools.LogUtil
 import com.privacyaccountofliu.openhourlychime.model.tools.Tools
@@ -35,61 +42,87 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     private val appContext: Context by lazy { applicationContext }
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var defaultAudioAttributes: AudioAttributes
+    private lateinit var audioManager: AudioManager
     private var isTtsReady = false
-    private var pendingSpeakRequest: String? = null
-    private var timeRange: List<Int> = listOf(DEFAULT_START, DEFAULT_END)
+    private var pendingSpeakRequests = ArrayDeque<String>()
+    private var timeRange: List<Int> = listOf(420, 1320)
     private var isNotice: Boolean = true
     private var mediaPlayer: MediaPlayer? = null
+    private var chimeMode: String = "tts"
+    private var chimeSound: String = "builtin_bell"
+    private var chimeSystemUri: String? = null
+    private var utteranceIdCounter = 0
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         LocaleHelper.applyServiceLanguage(appContext)
         initTTS()
         EventBus.getDefault().register(this)
-        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        val soundPreferencesOpi =
-            sharedPreferences.getString("sound_preference", "media_sound_control")
-        val timeRangePreferencesOpi =
-            sharedPreferences.getString("time_range_preference", "$DEFAULT_START-$DEFAULT_END")
-        isNotice = sharedPreferences.getBoolean("notifications_enabled", true)
-        defaultAudioAttributes = Tools().yieldAudioAttr(soundPreferencesOpi)
-        timeRange = Tools().timeSplit(timeRangePreferencesOpi!!)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val soundPref = prefs.getString("sound_preference", "media_sound_control")
+        val timeRangeStr = prefs.getString("time_range_preference", "420-1320")
+        isNotice = prefs.getBoolean("notifications_enabled", true)
+        chimeMode = prefs.getString("chime_mode_preference", "tts") ?: "tts"
+        chimeSound = prefs.getString("chime_sound_preference", "builtin_bell") ?: "builtin_bell"
+        chimeSystemUri = prefs.getString("chime_system_uri", null)
+        defaultAudioAttributes = Tools().yieldAudioAttr(soundPref)
+        timeRange = Tools().timeSplit(timeRangeStr!!)
         startForeground(notificationId, createNotification())
     }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            LogUtil.w("Language", appContext.resources.configuration.locale.language)
-            val result = when (appContext.resources.configuration.locale.language) {
-                "zh" -> textToSpeech.setLanguage(Locale.CHINA)
-                "en" -> textToSpeech.setLanguage(Locale.US)
-                else -> textToSpeech.setLanguage(Locale.CHINA)
+            val userLang = LocaleHelper.getLanguage(appContext)
+            LogUtil.w("Language", "User preference: $userLang")
+
+            val preferredLocale = LocaleHelper.localeForLanguage(userLang)
+            val altLocale = LocaleHelper.localeForLanguage(
+                if (userLang == "Chinese") "English" else "Chinese"
+            )
+
+            var result = textToSpeech.setLanguage(preferredLocale)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                LogUtil.w("TTS", "Preferred language $preferredLocale not available, trying alt $altLocale")
+                result = textToSpeech.setLanguage(altLocale)
             }
-            isTtsReady = if (result != TextToSpeech.LANG_MISSING_DATA &&
-                result != TextToSpeech.LANG_NOT_SUPPORTED
-            ) {
-                LogUtil.d("TTS", "引擎初始化成功")
-                textToSpeech.setAudioAttributes(defaultAudioAttributes)
-                true
-            } else {
-                LogUtil.e("TTS", "TTS缺失数据")
-                false
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                LogUtil.w("TTS", "Alt language failed, trying system default")
+                result = textToSpeech.setLanguage(Locale.getDefault())
+            }
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                LogUtil.w("TTS", "System default failed, trying en-US")
+                result = textToSpeech.setLanguage(Locale.US)
             }
 
-            pendingSpeakRequest?.let { text ->
-                speak(text)
-                pendingSpeakRequest = null
+            if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                LogUtil.d("TTS", "TTS initialized with ${textToSpeech.language}")
+                textToSpeech.setAudioAttributes(defaultAudioAttributes)
+                textToSpeech.setOnUtteranceProgressListener(utteranceListener)
+                isTtsReady = true
+            } else {
+                LogUtil.e("TTS", "All languages failed, TTS unavailable")
+                isTtsReady = false
             }
+
+            flushPendingQueue()
         } else {
-            LogUtil.e("TTS", "语音引擎初始化失败: $status")
+            LogUtil.e("TTS", "TTS engine init failed: $status")
             isTtsReady = false
         }
     }
 
+    private fun flushPendingQueue() {
+        while (pendingSpeakRequests.isNotEmpty()) {
+            val text = pendingSpeakRequests.removeFirst()
+            speak(text)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        updateLanguage()
         when (intent?.action) {
             "ACTION_HOURLY_CHIME" -> handleHourlyChime()
             "ACTION_TEST_CHIME" -> handleTestChime()
@@ -99,6 +132,9 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
         EventBus.getDefault().unregister(this)
+        if (audioFocusRequest != null) {
+            audioManager.abandonAudioFocusRequest(audioFocusRequest!!)
+        }
         if (::textToSpeech.isInitialized) {
             textToSpeech.stop()
             textToSpeech.shutdown()
@@ -114,19 +150,22 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onTimeRangeConfig(event: List<Int>) {
-        timeRange = event
-        DEFAULT_START = event[0]
-        DEFAULT_END = event[1]
+    fun onTimeRangeConfig(event: TimeRangeEvent) {
+        timeRange = event.data
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onIsNoticeConfig(tag: Boolean) {
-        isNotice = tag
+    fun onIsNoticeConfig(event: NoticeEnabledEvent) {
+        isNotice = event.enabled
+        startForeground(notificationId, createNotification())
     }
 
-    private fun updateLanguage() {
-        LocaleHelper.applyServiceLanguage(appContext)
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onChimeConfig(event: ChimeConfigEvent) {
+        chimeMode = event.mode
+        chimeSound = event.sound
+        chimeSystemUri = event.systemUri
+        LogUtil.d("TimeService", "Chime config updated: mode=$chimeMode sound=$chimeSound")
     }
 
     private fun createNotification(): Notification {
@@ -134,13 +173,12 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         return NotificationCompat.Builder(this, "time_service_channel_open_hourly_chime")
-            .setContentTitle(appContext.getString(R.string.notice_1))
-            .setContentText(appContext.getString(R.string.notice_2))
+            .setContentTitle(getString(R.string.notice_1))
+            .setContentText(getString(R.string.notice_2))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -150,9 +188,38 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
 
     private fun initTTS() {
         textToSpeech = TextToSpeech(this, this)
-        textToSpeech.apply {
-            setSpeechRate(0.5f)
-            setPitch(1.0f)
+        textToSpeech.setSpeechRate(0.5f)
+        textToSpeech.setPitch(1.0f)
+    }
+
+    private val utteranceListener = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) {
+            LogUtil.d("TTS", "Utterance started: $utteranceId")
+        }
+
+        override fun onDone(utteranceId: String?) {
+            LogUtil.d("TTS", "Utterance done: $utteranceId")
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest!!)
+                audioFocusRequest = null
+            }
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onError(utteranceId: String?) {
+            LogUtil.e("TTS", "Utterance error: $utteranceId")
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest!!)
+                audioFocusRequest = null
+            }
+        }
+
+        override fun onError(utteranceId: String?, errorCode: Int) {
+            LogUtil.e("TTS", "Utterance error: $utteranceId, code=$errorCode")
+            if (audioFocusRequest != null) {
+                audioManager.abandonAudioFocusRequest(audioFocusRequest!!)
+                audioFocusRequest = null
+            }
         }
     }
 
@@ -162,15 +229,11 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val minute = now.get(Calendar.MINUTE)
         if (timeRange[0] <= hour * 60 + minute && hour * 60 + minute <= timeRange[1]) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val chimeMode = prefs.getString("chime_mode_preference", "tts") ?: "tts"
-
             if (chimeMode == "custom_audio") {
-                val soundPref = prefs.getString("chime_sound_preference", "builtin_bell") ?: "builtin_bell"
-                val systemUri = prefs.getString("chime_system_uri", null)
-                playChimeSound(soundPref, systemUri)
+                playChimeSound(chimeSound, chimeSystemUri)
                 sendChimeNotification(getString(R.string.notice_3))
             } else {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(this)
                 val timeText = buildChimeText(hour, minute, defaultZoneId, prefs)
                 speak(timeText)
                 sendChimeNotification(timeText)
@@ -181,29 +244,17 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
     @SuppressLint("StringFormatMatches")
     private fun buildChimeText(hour: Int, minute: Int, defaultZoneId: String, prefs: android.content.SharedPreferences): String {
         val timeFormat = prefs.getString("time_format_preference", "24") ?: "24"
-
         if (timeFormat == "12") {
-            val hour12 = when {
-                hour == 0 -> 12
-                hour > 12 -> hour - 12
-                else -> hour
-            }
-            val ampm = if (hour < 12) "AM" else "PM"
+            val hour12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
             val locale = appContext.resources.configuration.locale.language
-            val ampmZh = if (hour < 12) "上午" else "下午"
-            val ampmDisplay = if (locale == "zh") ampmZh else ampm
-
-            return when (hour) {
-                0 -> appContext.getString(R.string.TTS_5, defaultZoneId, 12, ampmDisplay)
-                12 -> appContext.getString(R.string.TTS_5, defaultZoneId, 12, ampmDisplay)
-                else -> appContext.getString(R.string.TTS_5, defaultZoneId, hour12, ampmDisplay)
-            }
-        } else {
-            return when (hour) {
-                0 -> appContext.getString(R.string.TTS_1, defaultZoneId)
-                12 -> appContext.getString(R.string.TTS_2, defaultZoneId)
-                else -> appContext.getString(R.string.TTS_3, defaultZoneId, hour)
-            }
+            val ampm = if (hour < 12) "AM" else "PM"
+            val ampmDisplay = if (locale == "zh") (if (hour < 12) "上午" else "下午") else ampm
+            return appContext.getString(R.string.TTS_5, defaultZoneId, hour12, ampmDisplay)
+        }
+        return when (hour) {
+            0 -> appContext.getString(R.string.TTS_1, defaultZoneId)
+            12 -> appContext.getString(R.string.TTS_2, defaultZoneId)
+            else -> appContext.getString(R.string.TTS_3, defaultZoneId, hour)
         }
     }
 
@@ -215,54 +266,69 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         val defaultZoneId = TimeZone.getDefault().displayName
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val timeFormat = prefs.getString("time_format_preference", "24") ?: "24"
+        LogUtil.d("TimeService", "Test chime: timeRange=$timeRange chimeMode=$chimeMode")
 
-        LogUtil.d("TimeService", "$timeRange")
+        if (chimeMode == "custom_audio") {
+            playChimeSound(chimeSound, chimeSystemUri)
+            sendChimeNotification(getString(R.string.notice_3))
+            return
+        }
 
         val timeText = if (timeFormat == "12") {
-            val hour12 = when {
-                hour == 0 -> 12
-                hour > 12 -> hour - 12
-                else -> hour
-            }
+            val hour12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
             val locale = appContext.resources.configuration.locale.language
             val ampm = if (hour < 12) "AM" else "PM"
-            val ampmZh = if (hour < 12) "上午" else "下午"
-            val ampmDisplay = if (locale == "zh") ampmZh else ampm
+            val ampmDisplay = if (locale == "zh") (if (hour < 12) "上午" else "下午") else ampm
             appContext.getString(R.string.TTS_5, defaultZoneId, hour12, ampmDisplay)
         } else {
             appContext.getString(R.string.TTS_4, defaultZoneId, hour, minute)
         }
         speak(timeText)
-        LogUtil.d("TimeRange", "时间范围: $timeRange")
     }
 
     private fun sendChimeNotification(timeText: String) {
-        val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        val contentIntent = PendingIntent.getActivity(
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val pi = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
-        val notification = NotificationCompat.Builder(this, "alarm_channel_open_hourly_chime")
+        val n = NotificationCompat.Builder(this, "alarm_channel_open_hourly_chime")
             .setContentTitle(getString(R.string.notice_3))
             .setContentText(timeText)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(contentIntent)
+            .setContentIntent(pi)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
-
-        notificationManager.notify(1002, notification)
+        nm.notify(1002, n)
     }
 
     private fun speak(text: String) {
-        if (isTtsReady) {
-            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-        } else {
-            pendingSpeakRequest = text
+        if (!isTtsReady) {
+            pendingSpeakRequests.addLast(text)
+            return
         }
+        // Request audio focus
+        try {
+            val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(defaultAudioAttributes)
+                .setWillPauseWhenDucked(false)
+                .build()
+            val result = audioManager.requestAudioFocus(focusRequest)
+            if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                audioFocusRequest = focusRequest
+            } else {
+                LogUtil.w("TTS", "Audio focus request denied: $result")
+            }
+        } catch (e: Exception) {
+            LogUtil.e("TTS", "Audio focus request failed", e)
+        }
+
+        val utteranceId = "chime_" + (++utteranceIdCounter)
+        val params = Bundle().apply {
+            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+        }
+        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
     }
 
     private fun playChimeSound(soundPref: String, systemUri: String?) {
@@ -273,7 +339,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
                     try {
                         setDataSource(this@TimeService, Uri.parse(systemUri))
                     } catch (e: Exception) {
-                        LogUtil.e("TimeService", "Failed to load system ringtone, falling back to bell", e)
+                        LogUtil.e("TimeService", "Failed to load system ringtone", e)
                         setBuiltinDataSource(this, "builtin_bell")
                     }
                 } else {
@@ -307,7 +373,7 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
             mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             afd.close()
         } catch (e: Exception) {
-            LogUtil.e("TimeService", "Failed to load built-in sound, trying bell", e)
+            LogUtil.e("TimeService", "Failed to load built-in sound", e)
             val afd: AssetFileDescriptor = resources.openRawResourceFd(R.raw.chime_bell)
             mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             afd.close()
@@ -324,8 +390,5 @@ class TimeService : Service(), TextToSpeech.OnInitListener {
         fun stopService(context: Context) {
             context.stopService(Intent(context, TimeService::class.java))
         }
-
-        private var DEFAULT_START = 420
-        private var DEFAULT_END = 1320
     }
 }

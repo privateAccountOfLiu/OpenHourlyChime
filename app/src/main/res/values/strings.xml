@@ -9,7 +9,7 @@
     <string name="nav_head_icon">nav_head_icon</string>
     <string name="welcome">Welcome to use OpenHourlyChime!</string>
     <string name="msg2">Author: privateAccountOfLiu</string>
-    <string name="msg3">Version: 1.2.1\n</string>
+    <string name="msg3">Version: 1.2.3\n</string>
     <string name="msg4">Github:</string>
     <string name="msg5">https://github.com/privateAccountOfLiu</string>
     <string name="msg6">/OpenHourlyChime\n</string>
@@ -80,4 +80,10 @@
     <string name="toast_8">Exact alarm permission is required for hourly chime</string>
     <string name="dialog_need_restart_title">Need To Restart</string>
     <string name="dialog_need_restart_msg">This item needs to be restarted to take effect</string>
+    <string name="logs_title">Logs</string>
+    <string name="log_copy">Copy All</string>
+    <string name="log_clear">Clear</string>
+    <string name="log_copied">Logs copied to clipboard</string>
+    <string name="log_cleared">Logs cleared</string>
+    <string name="log_empty">No log entries yet. Warnings and errors will appear here.</string>
 </resources>

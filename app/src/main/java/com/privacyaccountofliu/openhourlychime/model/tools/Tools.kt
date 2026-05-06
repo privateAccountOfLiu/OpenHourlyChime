@@ -7,23 +7,27 @@ class Tools {
     fun yieldAudioAttr(soundPreferencesOpi: String? = "media_sound_control"): AudioAttributes {
         var usageType = AudioAttributes.USAGE_MEDIA
         var streamType = AudioManager.STREAM_MUSIC
-        when(soundPreferencesOpi) {
+        var contentType = AudioAttributes.CONTENT_TYPE_SPEECH
+        when (soundPreferencesOpi) {
             "media_sound_control" -> {
                 usageType = AudioAttributes.USAGE_MEDIA
                 streamType = AudioManager.STREAM_MUSIC
+                contentType = AudioAttributes.CONTENT_TYPE_SPEECH
             }
             "notification_sound_control" -> {
                 usageType = AudioAttributes.USAGE_NOTIFICATION
                 streamType = AudioManager.STREAM_NOTIFICATION
+                contentType = AudioAttributes.CONTENT_TYPE_SONIFICATION
             }
             "alarm_sound_control" -> {
                 usageType = AudioAttributes.USAGE_ALARM
                 streamType = AudioManager.STREAM_ALARM
+                contentType = AudioAttributes.CONTENT_TYPE_SONIFICATION
             }
         }
         return AudioAttributes.Builder()
             .setUsage(usageType)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .setContentType(contentType)
             .setLegacyStreamType(streamType)
             .build()
     }

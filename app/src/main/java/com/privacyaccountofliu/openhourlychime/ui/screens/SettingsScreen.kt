@@ -3,6 +3,7 @@ package com.privacyaccountofliu.openhourlychime.ui.screens
 import android.app.TimePickerDialog
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -336,6 +337,7 @@ private fun showTimeRangePicker(
         TimePickerDialog(context, { _, eh, em ->
             val ne = eh * 60 + em
             if (ns < ne) onRangeSelected(ns, ne)
+            else Toast.makeText(context, context.getString(R.string.toast_3), Toast.LENGTH_SHORT).show()
         }, endHour, endMin, true).apply { setTitle(context.getString(R.string.set14)); show() }
     }, startHour, startMin, true).apply { setTitle(context.getString(R.string.set13)); show() }
 }

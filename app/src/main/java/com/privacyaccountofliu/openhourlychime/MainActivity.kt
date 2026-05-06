@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
@@ -51,14 +53,19 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.preference.PreferenceManager
 import com.privacyaccountofliu.openhourlychime.model.events.AudioConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.events.ChimeConfigEvent
+import com.privacyaccountofliu.openhourlychime.model.events.NoticeEnabledEvent
+import com.privacyaccountofliu.openhourlychime.model.events.TimeRangeEvent
 import com.privacyaccountofliu.openhourlychime.model.services.TimeService
 import com.privacyaccountofliu.openhourlychime.model.tools.AlarmReceiver
 import com.privacyaccountofliu.openhourlychime.model.tools.AppRestartManager.restartApp
 import com.privacyaccountofliu.openhourlychime.model.tools.BatteryOptimizationHelper
 import com.privacyaccountofliu.openhourlychime.model.tools.LocaleHelper
+import com.privacyaccountofliu.openhourlychime.model.tools.LogUtil
 import com.privacyaccountofliu.openhourlychime.model.tools.ToastUtil
 import com.privacyaccountofliu.openhourlychime.model.tools.Tools
 import com.privacyaccountofliu.openhourlychime.ui.screens.AboutScreen
+import com.privacyaccountofliu.openhourlychime.ui.screens.LogViewerScreen
 import com.privacyaccountofliu.openhourlychime.ui.screens.MainScreen
 import com.privacyaccountofliu.openhourlychime.ui.screens.SettingsScreen
 import com.privacyaccountofliu.openhourlychime.ui.screens.SettingsState
@@ -67,7 +74,7 @@ import com.privacyaccountofliu.openhourlychime.ui.theme.HourlyChimeTheme
 import kotlinx.coroutines.launch
 import org.greenrobot.eventbus.EventBus
 
-enum class Screen { Home, Settings, About }
+enum class Screen { Home, Settings, About, Logs }
 
 class MainActivity : ComponentActivity() {
 
@@ -102,6 +109,13 @@ class MainActivity : ComponentActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             prefs.edit().putString("chime_system_uri", uri.toString()).apply()
             prefs.edit().putString("chime_sound_preference", "system_picker").apply()
+            val snd = prefs.getString("chime_sound_preference", "builtin_bell") ?: "builtin_bell"
+            EventBus.getDefault().post(ChimeConfigEvent(
+                prefs.getString("chime_mode_preference", "tts") ?: "tts",
+                snd,
+                uri.toString()
+            ))
+            recreate()
         }
     }
 
@@ -206,6 +220,7 @@ class MainActivity : ComponentActivity() {
             Screen.Home -> stringResource(R.string.app_name)
             Screen.Settings -> stringResource(R.string.str9)
             Screen.About -> stringResource(R.string.str12)
+            Screen.Logs -> stringResource(R.string.logs_title)
         }
 
         ModalNavigationDrawer(
@@ -310,6 +325,24 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
+                    // Logs item - only visible when advanced logging is enabled
+                    if (settingsState.value.advancedLogging) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        DrawerNavItem(
+                            icon = Icons.Outlined.BugReport,
+                            selectedIcon = Icons.Filled.BugReport,
+                            label = stringResource(R.string.logs_title),
+                            selected = currentScreen == Screen.Logs,
+                            onClick = {
+                                currentScreen = Screen.Logs
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
+
                     Spacer(Modifier.weight(1f))
 
                     // Bottom caption
@@ -349,7 +382,7 @@ class MainActivity : ComponentActivity() {
                             onNotificationChanged = { enabled ->
                                 prefs.edit().putBoolean("notifications_enabled", enabled).apply()
                                 settingsState.value = settingsState.value.copy(notificationsEnabled = enabled)
-                                EventBus.getDefault().post(enabled)
+                                EventBus.getDefault().post(NoticeEnabledEvent(enabled))
                                 ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
                             },
                             onSoundChanged = { sound ->
@@ -361,7 +394,7 @@ class MainActivity : ComponentActivity() {
                             onTimeRangeChanged = { start, end ->
                                 prefs.edit().putString("time_range_preference", "$start-$end").apply()
                                 settingsState.value = settingsState.value.copy(timeRangeStart = start, timeRangeEnd = end)
-                                EventBus.getDefault().post(listOf(start, end))
+                                EventBus.getDefault().post(TimeRangeEvent(listOf(start, end)))
                                 ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
                             },
                             onTestChime = {
@@ -401,6 +434,8 @@ class MainActivity : ComponentActivity() {
                             onChimeModeChanged = { mode ->
                                 prefs.edit().putString("chime_mode_preference", mode).apply()
                                 settingsState.value = settingsState.value.copy(chimeMode = mode)
+                                val s = settingsState.value
+                                EventBus.getDefault().post(ChimeConfigEvent(mode, s.chimeSound, s.chimeSystemUri))
                                 ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
                             },
                             onChimeSoundChanged = { sound ->
@@ -415,13 +450,20 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     prefs.edit().putString("chime_sound_preference", sound).apply()
                                     settingsState.value = settingsState.value.copy(chimeSound = sound)
+                                    val s = settingsState.value
+                                    EventBus.getDefault().post(ChimeConfigEvent(s.chimeMode, sound, s.chimeSystemUri))
                                     ToastUtil.showToast(this@MainActivity, getString(R.string.toast_1))
                                 }
                             },
-                            onChimeSystemUriChanged = {},
+                            onChimeSystemUriChanged = { uri ->
+                                if (uri != null) {
+                                    settingsState.value = settingsState.value.copy(chimeSystemUri = uri.toString())
+                                }
+                            },
                             onAboutClick = { currentScreen = Screen.About }
                         )
                         Screen.About -> AboutScreen()
+                        Screen.Logs -> LogViewerScreen()
                     }
                 }
             }
@@ -460,13 +502,13 @@ class MainActivity : ComponentActivity() {
             val alarmInfo = AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent)
             alarmManager.setAlarmClock(alarmInfo, pendingIntent)
         } catch (e: SecurityException) {
-            android.util.Log.e("Alarm", "Error setting alarm clock, falling back", e)
+            LogUtil.e("Alarm", "Error setting alarm clock, falling back", e)
             try {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent
                 )
             } catch (e2: Exception) {
-                android.util.Log.e("Alarm", "Fallback alarm also failed", e2)
+                LogUtil.e("Alarm", "Fallback alarm also failed", e2)
             }
         }
     }
@@ -509,11 +551,10 @@ class MainActivity : ComponentActivity() {
             .setTitle(getString(R.string.dialog_need_restart_title))
             .setMessage(getString(R.string.dialog_need_restart_msg))
             .setPositiveButton(getString(R.string.Yes)) { _, _ ->
-                runOnUiThread {
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        applicationContext.restartApp()
-                    }, 200)
-                }
+                TimeService.stopService(this@MainActivity)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    applicationContext.restartApp()
+                }, 500)
             }
             .show()
     }
